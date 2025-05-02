@@ -4,19 +4,21 @@ import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import FuelLevel from "@/components/FuelLevel";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Car } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const carOptions = [
-  { id: 1, name: "Fiat Mobi", lastUsed: true },
-  { id: 2, name: "VW Gol", lastUsed: false },
-  { id: 3, name: "Renault Kwid", lastUsed: false }
+  { id: 1, name: "Fiat Mobi", lastUsed: true, fuelPins: 5, odometer: 15420 },
+  { id: 2, name: "VW Gol", lastUsed: false, fuelPins: 8, odometer: 45680 },
+  { id: 3, name: "Renault Kwid", lastUsed: false, fuelPins: 6, odometer: 12350 },
+  { id: 4, name: "Fiat Argo", lastUsed: false, fuelPins: 12, odometer: 8750 }
 ];
 
 const CarReturn = () => {
@@ -24,6 +26,9 @@ const CarReturn = () => {
   const [selectedCar, setSelectedCar] = useState("");
   const [date, setDate] = useState<Date>(new Date());
   const [fuelLevel, setFuelLevel] = useState(0.5);
+  const [fuelPins, setFuelPins] = useState(5);
+  const [initialOdometer, setInitialOdometer] = useState(0);
+  const [finalOdometer, setFinalOdometer] = useState(0);
   
   // Set current time with zeroed seconds
   const now = new Date();
@@ -36,8 +41,21 @@ const CarReturn = () => {
     const lastUsedCar = carOptions.find(car => car.lastUsed);
     if (lastUsedCar) {
       setSelectedCar(lastUsedCar.id.toString());
+      setFuelPins(lastUsedCar.fuelPins);
+      setInitialOdometer(lastUsedCar.odometer);
+      setFinalOdometer(lastUsedCar.odometer); // Inicializa com o mesmo valor
     }
   }, []);
+
+  const handleCarChange = (value: string) => {
+    setSelectedCar(value);
+    const car = carOptions.find(car => car.id.toString() === value);
+    if (car) {
+      setFuelPins(car.fuelPins);
+      setInitialOdometer(car.odometer);
+      setFinalOdometer(car.odometer); // Atualiza odômetro inicial e final
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +63,11 @@ const CarReturn = () => {
     // Form validation
     if (!selectedCar) {
       toast.error("Selecione um carro");
+      return;
+    }
+
+    if (finalOdometer < initialOdometer) {
+      toast.error("A quilometragem final não pode ser menor que a inicial");
       return;
     }
     
@@ -66,7 +89,7 @@ const CarReturn = () => {
               <Label htmlFor="car">Carro</Label>
               <Select 
                 value={selectedCar} 
-                onValueChange={setSelectedCar}
+                onValueChange={handleCarChange}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione um carro" />
@@ -117,7 +140,32 @@ const CarReturn = () => {
               </p>
             </div>
             
-            <FuelLevel value={fuelLevel} onChange={setFuelLevel} />
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div>
+                <Label htmlFor="initialKm">Quilometragem Inicial</Label>
+                <div className="flex items-center bg-gray-100 p-3 rounded-md">
+                  <Car className="w-4 h-4 mr-2 text-gray-500" />
+                  <span>{initialOdometer.toLocaleString('pt-BR')} km</span>
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="finalKm">Quilometragem Final</Label>
+                <Input
+                  id="finalKm"
+                  type="number"
+                  value={finalOdometer}
+                  onChange={(e) => setFinalOdometer(parseInt(e.target.value) || 0)}
+                  min={initialOdometer}
+                  className="text-right"
+                />
+                <div className="flex justify-end">
+                  <span className="text-xs text-gray-500">km</span>
+                </div>
+              </div>
+            </div>
+            
+            <FuelLevel value={fuelLevel} onChange={setFuelLevel} pinCount={fuelPins} />
             
             <div className="flex justify-end mt-8">
               <Button type="submit" className="option-button">

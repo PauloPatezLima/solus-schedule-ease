@@ -68,11 +68,11 @@ export default {
           ring: 'hsl(var(--sidebar-ring))'
         },
         solus: {
-          primary: '#0056b3',
-          secondary: '#4CAF50',
-          warning: '#FF9800',
-          light: '#f8f9fa',
-          dark: '#212529'
+          primary: '#2563eb', // Azul mais moderno
+          secondary: '#4b5563', // Cinza médio
+          warning: '#f59e0b', // Amarelo/laranja para alertas
+          light: '#f1f5f9', // Cinza claro para fundos
+          dark: '#1e293b'  // Azul escuro quase preto
         }
       },
       borderRadius: {
