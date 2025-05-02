@@ -1,63 +1,60 @@
 
-import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import TimeSelect from "@/components/TimeSelect";
 import { toast } from "sonner";
+import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { CalendarIcon, Car } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import TimeSelect from "@/components/TimeSelect";
+import FuelLevel from "@/components/FuelLevel";
 
 const carOptions = [
-  { id: 1, name: "Fiat Mobi", fuelLevel: 0.75, odometer: 15420 },
-  { id: 2, name: "VW Gol", fuelLevel: 0.5, odometer: 45680 },
-  { id: 3, name: "Renault Kwid", fuelLevel: 1, odometer: 12350 },
-  { id: 4, name: "Fiat Argo", fuelLevel: 0.8, odometer: 8750 }
+  { id: 1, name: "Fiat Mobi", lastUsed: true, fuelLevel: 0.8, fuelPins: 5, odometer: 15420 },
+  { id: 2, name: "VW Gol", lastUsed: false, fuelLevel: 0.6, fuelPins: 8, odometer: 45680 },
+  { id: 3, name: "Renault Kwid", lastUsed: false, fuelLevel: 0.5, fuelPins: 6, odometer: 12350 },
+  { id: 4, name: "Fiat Argo", lastUsed: false, fuelLevel: 0.9, fuelPins: 12, odometer: 8750 }
 ];
 
 const CarRequest = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const carId = searchParams.get("carId");
-  const carName = searchParams.get("carName");
-  const fuelLevel = searchParams.get("fuelLevel");
-  
-  const [selectedCar, setSelectedCar] = useState(carId || "");
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [startTime, setStartTime] = useState("");
+  const [selectedCar, setSelectedCar] = useState("");
+  const [date, setDate] = useState<Date>(new Date());
+  const [startTime, setStartTime] = useState("09:00");
+  const [fuelLevel, setFuelLevel] = useState(0);
+  const [fuelPins, setFuelPins] = useState(5);
   const [initialOdometer, setInitialOdometer] = useState(0);
-  const [currentFuelLevel, setCurrentFuelLevel] = useState(
-    fuelLevel ? parseFloat(fuelLevel) : 0
-  );
-
-  const getFuelLevelText = (level: number) => {
-    if (level === 0) return "Vazio";
-    if (level === 0.25) return "1/4";
-    if (level === 0.5) return "1/2";
-    if (level === 0.75) return "3/4";
-    if (level === 1) return "Cheio";
-    return "";
-  };
+  
+  // Auto-select the last used car
+  useEffect(() => {
+    const lastUsedCar = carOptions.find(car => car.lastUsed);
+    if (lastUsedCar) {
+      setSelectedCar(lastUsedCar.id.toString());
+      setFuelLevel(lastUsedCar.fuelLevel);
+      setFuelPins(lastUsedCar.fuelPins);
+      setInitialOdometer(lastUsedCar.odometer);
+    }
+  }, []);
 
   const handleCarChange = (value: string) => {
     setSelectedCar(value);
-    const selectedCarData = carOptions.find(car => car.id.toString() === value);
-    if (selectedCarData) {
-      setCurrentFuelLevel(selectedCarData.fuelLevel);
-      setInitialOdometer(selectedCarData.odometer);
+    const car = carOptions.find(car => car.id.toString() === value);
+    if (car) {
+      setFuelLevel(car.fuelLevel);
+      setFuelPins(car.fuelPins);
+      setInitialOdometer(car.odometer);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Form validation
     if (!selectedCar) {
       toast.error("Selecione um carro");
       return;
@@ -69,12 +66,12 @@ const CarRequest = () => {
     }
     
     if (!startTime) {
-      toast.error("Selecione o horário de início");
+      toast.error("Selecione um horário de início");
       return;
     }
     
     // Success message and redirect
-    toast.success("Reserva solicitada com sucesso!");
+    toast.success("Reserva realizada com sucesso!");
     navigate("/carros");
   };
 
@@ -84,7 +81,7 @@ const CarRequest = () => {
       
       <div className="solus-container flex-1">
         <div className="max-w-lg mx-auto bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold mb-6">Preencha os dados da solicitação</h2>
+          <h2 className="text-xl font-semibold mb-6">Preencha os dados da reserva</h2>
           
           <form onSubmit={handleSubmit}>
             <div className="mb-4">
@@ -99,20 +96,12 @@ const CarRequest = () => {
                 <SelectContent>
                   {carOptions.map((car) => (
                     <SelectItem key={car.id} value={car.id.toString()}>
-                      {car.name}
+                      {car.name} {car.lastUsed ? " (Último reservado)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
-            {selectedCar && (
-              <div className="mb-4 p-3 bg-gray-100 rounded-md">
-                <p className="text-sm">
-                  <strong>Nível de Combustível Atual:</strong> {getFuelLevelText(currentFuelLevel)}
-                </p>
-              </div>
-            )}
             
             <div className="mb-4">
               <Label>Data</Label>
@@ -121,32 +110,33 @@ const CarRequest = () => {
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !date && "text-muted-foreground"
+                      "w-full justify-start text-left font-normal"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, "dd/MM/yyyy") : "Selecione uma data"}
+                    {format(date, "dd/MM/yyyy")}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0 pointer-events-auto">
                   <Calendar
                     mode="single"
                     selected={date}
-                    onSelect={setDate}
+                    onSelect={(newDate) => newDate && setDate(newDate)}
                     initialFocus
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     className="p-3"
                   />
                 </PopoverContent>
               </Popover>
             </div>
             
-            <TimeSelect 
-              label="Horário de Início" 
-              value={startTime} 
-              onChange={setStartTime} 
-            />
+            <div className="mb-4">
+              <Label>Horário de Retirada</Label>
+              <TimeSelect 
+                value={startTime}
+                onChange={setStartTime}
+                className="w-full"
+              />
+            </div>
             
             <div className="mb-4">
               <Label htmlFor="initialKm">Quilometragem Inicial</Label>
@@ -161,6 +151,15 @@ const CarRequest = () => {
                 <span className="text-xs text-gray-500">km</span>
               </div>
             </div>
+            
+            <FuelLevel 
+              value={fuelLevel} 
+              onChange={() => {}} 
+              pinCount={fuelPins} 
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Nível atual de combustível (somente visualização)
+            </p>
             
             <div className="flex justify-end mt-8">
               <Button type="submit" className="option-button">
