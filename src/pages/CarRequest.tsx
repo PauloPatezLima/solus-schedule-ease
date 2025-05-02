@@ -132,6 +132,7 @@ const CarRequest = () => {
             <div className="mb-4">
               <Label>Horário de Retirada</Label>
               <TimeSelect 
+                label="Horário de Retirada"
                 value={startTime}
                 onChange={setStartTime}
                 className="w-full"
