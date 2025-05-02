@@ -6,6 +6,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import UserManagement from "./UserManagement";
 import RoomHistory from "./RoomHistory";
 import CarHistory from "./CarHistory";
+import RoomManagement from "./RoomManagement";
+import CarManagement from "./CarManagement";
 import { useNavigate } from "react-router-dom";
 
 const AdminDashboard = () => {
@@ -36,10 +38,12 @@ const AdminDashboard = () => {
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsList className="grid w-full grid-cols-5 mb-8">
             <TabsTrigger value="usuarios">Usuários</TabsTrigger>
-            <TabsTrigger value="salas">Histórico de Salas</TabsTrigger>
-            <TabsTrigger value="carros">Histórico de Carros</TabsTrigger>
+            <TabsTrigger value="salas">Gerenciar Salas</TabsTrigger>
+            <TabsTrigger value="carros">Gerenciar Carros</TabsTrigger>
+            <TabsTrigger value="historico-salas">Histórico Salas</TabsTrigger>
+            <TabsTrigger value="historico-carros">Histórico Carros</TabsTrigger>
           </TabsList>
           
           <TabsContent value="usuarios">
@@ -47,10 +51,18 @@ const AdminDashboard = () => {
           </TabsContent>
           
           <TabsContent value="salas">
-            <RoomHistory />
+            <RoomManagement />
           </TabsContent>
           
           <TabsContent value="carros">
+            <CarManagement />
+          </TabsContent>
+          
+          <TabsContent value="historico-salas">
+            <RoomHistory />
+          </TabsContent>
+          
+          <TabsContent value="historico-carros">
             <CarHistory />
           </TabsContent>
         </Tabs>

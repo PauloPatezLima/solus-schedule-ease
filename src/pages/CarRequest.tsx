@@ -66,7 +66,7 @@ const CarRequest = () => {
     }
     
     if (!startTime) {
-      toast.error("Selecione um horário de início");
+      toast.error("Selecione um horário de retirada");
       return;
     }
     
