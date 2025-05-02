@@ -11,13 +11,14 @@ import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Car } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const carOptions = [
-  { id: 1, name: "Fiat Mobi", fuelLevel: 0.75 },
-  { id: 2, name: "VW Gol", fuelLevel: 0.5 },
-  { id: 3, name: "Renault Kwid", fuelLevel: 1 }
+  { id: 1, name: "Fiat Mobi", fuelLevel: 0.75, odometer: 15420 },
+  { id: 2, name: "VW Gol", fuelLevel: 0.5, odometer: 45680 },
+  { id: 3, name: "Renault Kwid", fuelLevel: 1, odometer: 12350 },
+  { id: 4, name: "Fiat Argo", fuelLevel: 0.8, odometer: 8750 }
 ];
 
 const CarRequest = () => {
@@ -30,7 +31,7 @@ const CarRequest = () => {
   const [selectedCar, setSelectedCar] = useState(carId || "");
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [startTime, setStartTime] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [initialOdometer, setInitialOdometer] = useState(0);
   const [currentFuelLevel, setCurrentFuelLevel] = useState(
     fuelLevel ? parseFloat(fuelLevel) : 0
   );
@@ -44,17 +45,12 @@ const CarRequest = () => {
     return "";
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
-    }
-  };
-
   const handleCarChange = (value: string) => {
     setSelectedCar(value);
     const selectedCarData = carOptions.find(car => car.id.toString() === value);
     if (selectedCarData) {
       setCurrentFuelLevel(selectedCarData.fuelLevel);
+      setInitialOdometer(selectedCarData.odometer);
     }
   };
 
@@ -74,11 +70,6 @@ const CarRequest = () => {
     
     if (!startTime) {
       toast.error("Selecione o horário de início");
-      return;
-    }
-    
-    if (!file) {
-      toast.error("Anexe uma cópia da sua CNH");
       return;
     }
     
@@ -158,17 +149,17 @@ const CarRequest = () => {
             />
             
             <div className="mb-4">
-              <Label htmlFor="cnh">CNH (PDF ou imagem)</Label>
+              <Label htmlFor="initialKm">Quilometragem Inicial</Label>
               <Input
-                id="cnh"
-                type="file"
-                accept=".pdf,image/*"
-                onChange={handleFileChange}
-                className="cursor-pointer"
+                id="initialKm"
+                type="number"
+                value={initialOdometer}
+                onChange={(e) => setInitialOdometer(parseInt(e.target.value) || 0)}
+                className="text-right"
               />
-              <p className="text-xs text-gray-500 mt-1">
-                Anexe uma cópia da sua CNH (PDF ou imagem)
-              </p>
+              <div className="flex justify-end">
+                <span className="text-xs text-gray-500">km</span>
+              </div>
             </div>
             
             <div className="flex justify-end mt-8">

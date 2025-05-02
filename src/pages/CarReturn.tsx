@@ -27,7 +27,6 @@ const CarReturn = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [fuelLevel, setFuelLevel] = useState(0.5);
   const [fuelPins, setFuelPins] = useState(5);
-  const [initialOdometer, setInitialOdometer] = useState(0);
   const [finalOdometer, setFinalOdometer] = useState(0);
   
   // Set current time with zeroed seconds
@@ -42,7 +41,6 @@ const CarReturn = () => {
     if (lastUsedCar) {
       setSelectedCar(lastUsedCar.id.toString());
       setFuelPins(lastUsedCar.fuelPins);
-      setInitialOdometer(lastUsedCar.odometer);
       setFinalOdometer(lastUsedCar.odometer); // Inicializa com o mesmo valor
     }
   }, []);
@@ -52,8 +50,7 @@ const CarReturn = () => {
     const car = carOptions.find(car => car.id.toString() === value);
     if (car) {
       setFuelPins(car.fuelPins);
-      setInitialOdometer(car.odometer);
-      setFinalOdometer(car.odometer); // Atualiza odômetro inicial e final
+      setFinalOdometer(car.odometer); // Atualiza odômetro final
     }
   };
 
@@ -63,11 +60,6 @@ const CarReturn = () => {
     // Form validation
     if (!selectedCar) {
       toast.error("Selecione um carro");
-      return;
-    }
-
-    if (finalOdometer < initialOdometer) {
-      toast.error("A quilometragem final não pode ser menor que a inicial");
       return;
     }
     
@@ -140,28 +132,17 @@ const CarReturn = () => {
               </p>
             </div>
             
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div>
-                <Label htmlFor="initialKm">Quilometragem Inicial</Label>
-                <div className="flex items-center bg-gray-100 p-3 rounded-md">
-                  <Car className="w-4 h-4 mr-2 text-gray-500" />
-                  <span>{initialOdometer.toLocaleString('pt-BR')} km</span>
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="finalKm">Quilometragem Final</Label>
-                <Input
-                  id="finalKm"
-                  type="number"
-                  value={finalOdometer}
-                  onChange={(e) => setFinalOdometer(parseInt(e.target.value) || 0)}
-                  min={initialOdometer}
-                  className="text-right"
-                />
-                <div className="flex justify-end">
-                  <span className="text-xs text-gray-500">km</span>
-                </div>
+            <div className="mb-4">
+              <Label htmlFor="finalKm">Quilometragem Final</Label>
+              <Input
+                id="finalKm"
+                type="number"
+                value={finalOdometer}
+                onChange={(e) => setFinalOdometer(parseInt(e.target.value) || 0)}
+                className="text-right"
+              />
+              <div className="flex justify-end">
+                <span className="text-xs text-gray-500">km</span>
               </div>
             </div>
             

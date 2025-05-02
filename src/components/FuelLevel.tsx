@@ -27,6 +27,7 @@ const FuelLevel = ({ value, onChange, pinCount = 5 }: FuelLevelProps) => {
           {levels.map((level, index) => (
             <button
               key={index}
+              type="button" // Adicionado para evitar submissão do formulário ao clicar
               className={`w-4 h-4 rounded-full border-2 transition-all ${
                 value >= level 
                   ? 'bg-solus-primary border-solus-primary' 
