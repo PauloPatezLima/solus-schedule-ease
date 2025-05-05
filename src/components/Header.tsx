@@ -1,5 +1,5 @@
 
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 
 interface HeaderProps {
@@ -9,7 +9,9 @@ interface HeaderProps {
 
 const Header = ({ title, showBackButton = true }: HeaderProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
+  const isAdminPage = location.pathname.startsWith("/admin");
 
   useEffect(() => {
     const userJson = localStorage.getItem("solusUser");
@@ -40,7 +42,7 @@ const Header = ({ title, showBackButton = true }: HeaderProps) => {
         </div>
         
         <div className="flex items-center space-x-4">
-          {isAdmin && (
+          {isAdmin && !isAdminPage && (
             <button
               onClick={() => navigate("/admin")}
               className="p-2 hover:bg-white/20 rounded-md transition-colors text-sm"
@@ -49,12 +51,14 @@ const Header = ({ title, showBackButton = true }: HeaderProps) => {
             </button>
           )}
           
-          <button
-            onClick={handleLogout}
-            className="p-2 hover:bg-white/20 rounded-md transition-colors text-sm"
-          >
-            Sair
-          </button>
+          {!isAdminPage && (
+            <button
+              onClick={handleLogout}
+              className="p-2 hover:bg-white/20 rounded-md transition-colors text-sm"
+            >
+              Sair
+            </button>
+          )}
         </div>
       </div>
     </div>

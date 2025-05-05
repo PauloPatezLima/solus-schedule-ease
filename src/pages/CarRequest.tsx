@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
@@ -56,6 +55,8 @@ const CarRequest = () => {
         setFuelLevel(selectedCarFromQuery.fuelLevel);
         setFuelPins(selectedCarFromQuery.fuelCapacity || selectedCarFromQuery.fuelPins);
         setInitialOdometer(selectedCarFromQuery.odometer);
+        // Mostrar toast confirmando a seleção do carro
+        toast.info(`Carro ${decodeURIComponent(carNameFromQuery || selectedCarFromQuery.name)} selecionado`);
       }
     } else {
       // Caso não tenha carro na query ou carro não encontrado, selecionar o último usado
@@ -66,13 +67,6 @@ const CarRequest = () => {
         setFuelPins(lastUsedCar.fuelCapacity || lastUsedCar.fuelPins);
         setInitialOdometer(lastUsedCar.odometer);
       }
-    }
-  }, [carIdFromQuery]);
-
-  useEffect(() => {
-    // Se tiver carIdFromQuery e name, mostrar toast de carro selecionado
-    if (carIdFromQuery && carNameFromQuery) {
-      toast.info(`Carro ${decodeURIComponent(carNameFromQuery)} selecionado`);
     }
   }, [carIdFromQuery, carNameFromQuery]);
 

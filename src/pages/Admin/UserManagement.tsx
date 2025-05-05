@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Edit } from "lucide-react";
 
 // Dados simulados de usuários
 const initialUsers = [
@@ -27,6 +29,16 @@ const UserManagement = () => {
   const [password, setPassword] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Estado para controlar o modal de edição
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editDriverLicense, setEditDriverLicense] = useState("");
+  const [editDriverLicenseFile, setEditDriverLicenseFile] = useState<File | null>(null);
+  const [editIsAdmin, setEditIsAdmin] = useState(false);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,6 +122,71 @@ const UserManagement = () => {
     toast.success("Usuário removido com sucesso!");
   };
 
+  const openEditModal = (user: any) => {
+    setEditingUser(user);
+    setEditName(user.name);
+    setEditEmail(user.email);
+    setEditDriverLicense(user.driverLicense);
+    setEditIsAdmin(user.isAdmin);
+    setIsEditOpen(true);
+  };
+
+  const handleEditUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editName.trim() || !editEmail.trim() || !editDriverLicense.trim()) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+    
+    // Verificar se o email já existe (exceto o do usuário atual)
+    if (users.some(user => user.email === editEmail && user.id !== editingUser.id)) {
+      toast.error("Este email já está em uso por outro usuário");
+      return;
+    }
+    
+    // Função para processar e atualizar o usuário
+    const processUserUpdate = (driverLicenseFileData?: any) => {
+      // Atualizar o usuário
+      const updatedUsers = users.map(user => {
+        if (user.id === editingUser.id) {
+          return {
+            ...user,
+            name: editName,
+            email: editEmail,
+            driverLicense: editDriverLicense,
+            driverLicenseFile: driverLicenseFileData !== undefined 
+              ? driverLicenseFileData 
+              : user.driverLicenseFile,
+            isAdmin: editIsAdmin
+          };
+        }
+        return user;
+      });
+      
+      setUsers(updatedUsers);
+      localStorage.setItem("solusUsers", JSON.stringify(updatedUsers));
+      setIsEditOpen(false);
+      toast.success("Usuário atualizado com sucesso!");
+    };
+
+    // Se um novo arquivo foi selecionado, convertê-lo
+    if (editDriverLicenseFile) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        processUserUpdate({
+          name: editDriverLicenseFile.name,
+          type: editDriverLicenseFile.type,
+          data: reader.result
+        });
+      };
+      reader.readAsDataURL(editDriverLicenseFile);
+    } else {
+      // Se não tiver novo arquivo, apenas atualizar os outros dados
+      processUserUpdate();
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
@@ -127,6 +204,26 @@ const UserManagement = () => {
       }
       
       setDriverLicenseFile(file);
+    }
+  };
+
+  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      // Verificar o tamanho do arquivo (limite de 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("O arquivo é muito grande. Tamanho máximo: 5MB");
+        return;
+      }
+      
+      // Verificar o tipo do arquivo
+      const acceptedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (!acceptedTypes.includes(file.type)) {
+        toast.error("Formato de arquivo não aceito. Use PDF, JPEG ou PNG");
+        return;
+      }
+      
+      setEditDriverLicenseFile(file);
     }
   };
 
@@ -266,7 +363,16 @@ const UserManagement = () => {
                   <TableCell>
                     {user.isAdmin ? "Administrador" : "Usuário"}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditModal(user)}
+                      className="mr-2"
+                      disabled={user.id === 1} // Não permitir editar o admin principal
+                    >
+                      <Edit className="h-4 w-4 mr-1" /> Editar
+                    </Button>
                     <Button
                       variant="destructive"
                       size="sm"
@@ -282,6 +388,86 @@ const UserManagement = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Modal de Edição de Usuário */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Usuário</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditUser} className="space-y-4 pt-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="editName">Nome</Label>
+                <Input
+                  id="editName"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="editEmail">Email</Label>
+                <Input
+                  id="editEmail"
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="editDriverLicense">CNH</Label>
+                <Input
+                  id="editDriverLicense"
+                  value={editDriverLicense}
+                  onChange={(e) => setEditDriverLicense(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="editDriverLicenseFile">
+                  Documento da CNH (Opcional - Deixe em branco para manter o atual)
+                </Label>
+                <Input
+                  id="editDriverLicenseFile"
+                  type="file"
+                  ref={editFileInputRef}
+                  onChange={handleEditFileChange}
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="cursor-pointer"
+                />
+                {editDriverLicenseFile && (
+                  <p className="text-xs text-green-600">
+                    Novo arquivo: {editDriverLicenseFile.name}
+                  </p>
+                )}
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="editIsAdmin" 
+                  checked={editIsAdmin} 
+                  onCheckedChange={(checked) => setEditIsAdmin(checked === true)}
+                  disabled={editingUser?.id === 1} // Não permitir mudar o status do admin principal
+                />
+                <label htmlFor="editIsAdmin" className="text-sm font-medium">
+                  Administrador
+                </label>
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" className="bg-solus-primary hover:bg-solus-primary/90">
+                Salvar Alterações
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
