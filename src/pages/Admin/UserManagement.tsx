@@ -1,16 +1,17 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
+import { Label } from "@/components/ui/label";
 
 // Dados simulados de usuários
 const initialUsers = [
-  { id: 1, name: "Administrador", email: "admin@solus.com", driverLicense: "12345678900", isAdmin: true },
-  { id: 2, name: "Usuário Teste", email: "usuario@solus.com", driverLicense: "98765432100", isAdmin: false },
+  { id: 1, name: "Administrador", email: "admin@solus.com", driverLicense: "12345678900", driverLicenseFile: null, isAdmin: true },
+  { id: 2, name: "Usuário Teste", email: "usuario@solus.com", driverLicense: "98765432100", driverLicenseFile: null, isAdmin: false },
 ];
 
 const UserManagement = () => {
@@ -22,8 +23,10 @@ const UserManagement = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [driverLicense, setDriverLicense] = useState("");
+  const [driverLicenseFile, setDriverLicenseFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,26 +54,47 @@ const UserManagement = () => {
       return;
     }
     
-    // Adicionar novo usuário
-    const newUser = {
-      id: users.length + 1,
-      name,
-      email,
-      driverLicense,
-      isAdmin
+    // Validação de arquivo de CNH
+    if (!driverLicenseFile) {
+      toast.error("É necessário anexar uma cópia da CNH");
+      return;
+    }
+    
+    // Convertemos o arquivo para URL base64 para armazenamento
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      // Adicionar novo usuário
+      const newUser = {
+        id: users.length + 1,
+        name,
+        email,
+        driverLicense,
+        driverLicenseFile: {
+          name: driverLicenseFile.name,
+          type: driverLicenseFile.type,
+          data: reader.result
+        },
+        isAdmin
+      };
+      
+      const updatedUsers = [...users, newUser];
+      setUsers(updatedUsers);
+      localStorage.setItem("solusUsers", JSON.stringify(updatedUsers));
+      toast.success("Usuário cadastrado com sucesso!");
+      
+      // Limpar formulário
+      setName("");
+      setEmail("");
+      setDriverLicense("");
+      setDriverLicenseFile(null);
+      setPassword("");
+      setIsAdmin(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     };
     
-    const updatedUsers = [...users, newUser];
-    setUsers(updatedUsers);
-    localStorage.setItem("solusUsers", JSON.stringify(updatedUsers));
-    toast.success("Usuário cadastrado com sucesso!");
-    
-    // Limpar formulário
-    setName("");
-    setEmail("");
-    setDriverLicense("");
-    setPassword("");
-    setIsAdmin(false);
+    reader.readAsDataURL(driverLicenseFile);
   };
 
   const handleDeleteUser = (id: number) => {
@@ -84,6 +108,26 @@ const UserManagement = () => {
     setUsers(updatedUsers);
     localStorage.setItem("solusUsers", JSON.stringify(updatedUsers));
     toast.success("Usuário removido com sucesso!");
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
+      // Verificar o tamanho do arquivo (limite de 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error("O arquivo é muito grande. Tamanho máximo: 5MB");
+        return;
+      }
+      
+      // Verificar o tipo do arquivo
+      const acceptedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+      if (!acceptedTypes.includes(file.type)) {
+        toast.error("Formato de arquivo não aceito. Use PDF, JPEG ou PNG");
+        return;
+      }
+      
+      setDriverLicenseFile(file);
+    }
   };
 
   return (
@@ -140,6 +184,25 @@ const UserManagement = () => {
               </div>
             </div>
             
+            <div className="space-y-2">
+              <Label htmlFor="driverLicenseFile" className="block text-sm font-medium">
+                Documento da CNH (PDF, JPEG, PNG)
+              </Label>
+              <Input
+                id="driverLicenseFile"
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".pdf,.jpg,.jpeg,.png"
+                className="cursor-pointer"
+              />
+              {driverLicenseFile && (
+                <p className="text-xs text-green-600">
+                  Arquivo selecionado: {driverLicenseFile.name}
+                </p>
+              )}
+            </div>
+            
             <div className="flex items-center space-x-2">
               <Checkbox 
                 id="admin" 
@@ -172,6 +235,7 @@ const UserManagement = () => {
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>CNH</TableHead>
+                <TableHead>Documento</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -182,6 +246,23 @@ const UserManagement = () => {
                   <TableCell>{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.driverLicense}</TableCell>
+                  <TableCell>
+                    {user.driverLicenseFile ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          if (user.driverLicenseFile?.data) {
+                            window.open(user.driverLicenseFile.data as string, '_blank');
+                          }
+                        }}
+                      >
+                        Ver documento
+                      </Button>
+                    ) : (
+                      <span className="text-gray-400">Não anexado</span>
+                    )}
+                  </TableCell>
                   <TableCell>
                     {user.isAdmin ? "Administrador" : "Usuário"}
                   </TableCell>

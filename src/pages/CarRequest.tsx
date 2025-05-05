@@ -20,6 +20,7 @@ const CarRequest = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const carIdFromQuery = queryParams.get('carId');
+  const carNameFromQuery = queryParams.get('carName');
   
   const [cars, setCars] = useState<any[]>([]);
   const [selectedCar, setSelectedCar] = useState("");
@@ -66,6 +67,13 @@ const CarRequest = () => {
       setInitialOdometer(lastUsedCar.odometer);
     }
   }, [carIdFromQuery]);
+
+  useEffect(() => {
+    // Se tiver carIdFromQuery e name, mostrar toast de carro selecionado
+    if (carIdFromQuery && carNameFromQuery) {
+      toast.info(`Carro ${decodeURIComponent(carNameFromQuery)} selecionado`);
+    }
+  }, [carIdFromQuery, carNameFromQuery]);
 
   const handleCarChange = (value: string) => {
     setSelectedCar(value);

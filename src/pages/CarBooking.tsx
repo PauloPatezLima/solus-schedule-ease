@@ -59,7 +59,7 @@ const CarBooking = () => {
                 details={`Placa: ${car.plate} • Combustível: ${getFuelLevelText(car.fuelLevel)}`}
                 onClick={() => {
                   if (car.isAvailable) {
-                    navigate(`/carros/solicitar?carId=${car.id}&carName=${car.name}&fuelLevel=${car.fuelLevel}`);
+                    navigate(`/carros/solicitar?carId=${car.id}&carName=${encodeURIComponent(car.name)}`);
                   } else {
                     toast.error("Este carro já está reservado");
                   }

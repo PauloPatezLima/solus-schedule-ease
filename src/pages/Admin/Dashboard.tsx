@@ -40,13 +40,27 @@ const AdminDashboard = () => {
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-5'} mb-8`}>
-            <TabsTrigger value="usuarios" className={isMobile ? "mb-1" : ""}>Usuários</TabsTrigger>
-            <TabsTrigger value="salas" className={isMobile ? "mb-1" : ""}>Salas</TabsTrigger>
-            <TabsTrigger value="carros" className={isMobile ? "mb-1" : ""}>Carros</TabsTrigger>
-            <TabsTrigger value="historico-salas" className={isMobile ? "mb-1" : ""}>Hist. Salas</TabsTrigger>
-            <TabsTrigger value="historico-carros" className={isMobile ? "mb-1" : ""}>Hist. Carros</TabsTrigger>
-          </TabsList>
+          {isMobile ? (
+            <div className="mb-6">
+              <TabsList className="grid w-full grid-cols-3 gap-1 mb-2">
+                <TabsTrigger value="usuarios">Usuários</TabsTrigger>
+                <TabsTrigger value="salas">Salas</TabsTrigger>
+                <TabsTrigger value="carros">Carros</TabsTrigger>
+              </TabsList>
+              <TabsList className="grid w-full grid-cols-2 gap-1">
+                <TabsTrigger value="historico-salas">Hist. Salas</TabsTrigger>
+                <TabsTrigger value="historico-carros">Hist. Carros</TabsTrigger>
+              </TabsList>
+            </div>
+          ) : (
+            <TabsList className="grid w-full grid-cols-5 mb-8">
+              <TabsTrigger value="usuarios">Usuários</TabsTrigger>
+              <TabsTrigger value="salas">Salas</TabsTrigger>
+              <TabsTrigger value="carros">Carros</TabsTrigger>
+              <TabsTrigger value="historico-salas">Hist. Salas</TabsTrigger>
+              <TabsTrigger value="historico-carros">Hist. Carros</TabsTrigger>
+            </TabsList>
+          )}
           
           <TabsContent value="usuarios">
             <UserManagement />
