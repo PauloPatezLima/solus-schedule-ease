@@ -6,6 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { DialogTrigger } from "@radix-ui/react-dialog";
+import { Edit } from "lucide-react";
 
 // Dados simulados de carros
 const initialCars = [
@@ -24,6 +27,13 @@ const CarManagement = () => {
   const [name, setName] = useState("");
   const [plate, setPlate] = useState("");
   const [fuelCapacity, setFuelCapacity] = useState(8);
+  
+  // Modal de edição
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingCar, setEditingCar] = useState<any>(null);
+  const [editName, setEditName] = useState("");
+  const [editPlate, setEditPlate] = useState("");
+  const [editFuelCapacity, setEditFuelCapacity] = useState(0);
 
   // Salvar carros no localStorage quando houver alterações
   useEffect(() => {
@@ -68,6 +78,46 @@ const CarManagement = () => {
   const handleDeleteCar = (id: number) => {
     setCars(cars.filter(car => car.id !== id));
     toast.success("Carro removido com sucesso!");
+  };
+
+  const openEditModal = (car: any) => {
+    setEditingCar(car);
+    setEditName(car.name);
+    setEditPlate(car.plate);
+    setEditFuelCapacity(car.fuelCapacity);
+    setIsEditOpen(true);
+  };
+
+  const handleEditCar = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!editName.trim() || !editPlate.trim()) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+    
+    // Verificar se a placa já existe (exceto a do carro atual)
+    if (cars.some(car => car.plate === editPlate && car.id !== editingCar.id)) {
+      toast.error("Esta placa já está cadastrada para outro carro");
+      return;
+    }
+    
+    // Atualizar o carro
+    const updatedCars = cars.map(car => {
+      if (car.id === editingCar.id) {
+        return {
+          ...car,
+          name: editName,
+          plate: editPlate,
+          fuelCapacity: editFuelCapacity
+        };
+      }
+      return car;
+    });
+    
+    setCars(updatedCars);
+    setIsEditOpen(false);
+    toast.success("Carro atualizado com sucesso!");
   };
 
   return (
@@ -149,7 +199,15 @@ const CarManagement = () => {
                       {car.isAvailable ? "Disponível" : "Reservado"}
                     </span>
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditModal(car)}
+                      className="mr-2"
+                    >
+                      <Edit className="h-4 w-4 mr-1" /> Editar
+                    </Button>
                     <Button
                       variant="destructive"
                       size="sm"
@@ -164,6 +222,57 @@ const CarManagement = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Modal de Edição */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Carro</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditCar} className="space-y-4 pt-4">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="editName">Modelo</Label>
+                <Input
+                  id="editName"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="editPlate">Placa</Label>
+                <Input
+                  id="editPlate"
+                  value={editPlate}
+                  onChange={(e) => setEditPlate(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="editFuelCapacity">Capacidade de Combustível (pins)</Label>
+                <Input
+                  id="editFuelCapacity"
+                  type="number"
+                  min="1"
+                  max="20"
+                  value={editFuelCapacity}
+                  onChange={(e) => setEditFuelCapacity(parseInt(e.target.value) || 0)}
+                />
+              </div>
+            </div>
+            
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" className="bg-solus-primary hover:bg-solus-primary/90">
+                Salvar Alterações
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

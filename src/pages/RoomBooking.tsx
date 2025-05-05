@@ -1,22 +1,31 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import ResourceCard from "@/components/ResourceCard";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 // Dummy data for room availability
-const roomsData = [
+const initialRoomsData = [
   { id: 1, name: "Sala de Reunião", isAvailable: true, capacity: "10 pessoas" },
   { id: 2, name: "Sala Coworking", isAvailable: false, capacity: "8 pessoas" },
-  { id: 3, name: "Sala Colab", isAvailable: true, capacity: "6 pessoas" }
+  { id: 3, name: "Sala Colab (Aquário)", isAvailable: true, capacity: "6 pessoas" }
 ];
 
 const RoomBooking = () => {
   const navigate = useNavigate();
-  const [rooms] = useState(roomsData);
+  const [rooms, setRooms] = useState(() => {
+    const savedRooms = localStorage.getItem("solusRooms");
+    return savedRooms ? JSON.parse(savedRooms) : initialRoomsData;
+  });
   const today = new Date();
+
+  // Salvar salas no localStorage
+  useEffect(() => {
+    localStorage.setItem("solusRooms", JSON.stringify(rooms));
+  }, [rooms]);
   
   return (
     <div className="min-h-screen flex flex-col bg-solus-light">
@@ -39,7 +48,9 @@ const RoomBooking = () => {
                 details={`Capacidade: ${room.capacity}`}
                 onClick={() => {
                   if (room.isAvailable) {
-                    navigate(`/salas/solicitar?roomId=${room.id}&roomName=${room.name}`);
+                    navigate(`/salas/solicitar?roomId=${room.id}&roomName=${encodeURIComponent(room.name)}`);
+                  } else {
+                    toast.error("Esta sala já está reservada");
                   }
                 }}
               />
