@@ -9,14 +9,19 @@ import { toast } from "sonner";
 
 // Dados simulados de usuários
 const initialUsers = [
-  { id: 1, name: "Administrador", email: "admin@solus.com", isAdmin: true },
-  { id: 2, name: "Usuário Teste", email: "usuario@solus.com", isAdmin: false },
+  { id: 1, name: "Administrador", email: "admin@solus.com", driverLicense: "12345678900", isAdmin: true },
+  { id: 2, name: "Usuário Teste", email: "usuario@solus.com", driverLicense: "98765432100", isAdmin: false },
 ];
 
 const UserManagement = () => {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState(() => {
+    const savedUsers = localStorage.getItem("solusUsers");
+    return savedUsers ? JSON.parse(savedUsers) : initialUsers;
+  });
+  
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [driverLicense, setDriverLicense] = useState("");
   const [password, setPassword] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -24,7 +29,7 @@ const UserManagement = () => {
     e.preventDefault();
     
     // Validações simples
-    if (!name.trim() || !email.trim() || !password.trim()) {
+    if (!name.trim() || !email.trim() || !password.trim() || !driverLicense.trim()) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -39,21 +44,31 @@ const UserManagement = () => {
       toast.error("Este email já está em uso");
       return;
     }
+
+    // Validação simples de CNH
+    if (driverLicense.length < 9) {
+      toast.error("CNH inválida - deve ter pelo menos 9 caracteres");
+      return;
+    }
     
     // Adicionar novo usuário
     const newUser = {
       id: users.length + 1,
       name,
       email,
+      driverLicense,
       isAdmin
     };
     
-    setUsers([...users, newUser]);
+    const updatedUsers = [...users, newUser];
+    setUsers(updatedUsers);
+    localStorage.setItem("solusUsers", JSON.stringify(updatedUsers));
     toast.success("Usuário cadastrado com sucesso!");
     
     // Limpar formulário
     setName("");
     setEmail("");
+    setDriverLicense("");
     setPassword("");
     setIsAdmin(false);
   };
@@ -65,7 +80,9 @@ const UserManagement = () => {
       return;
     }
     
-    setUsers(users.filter(user => user.id !== id));
+    const updatedUsers = users.filter(user => user.id !== id);
+    setUsers(updatedUsers);
+    localStorage.setItem("solusUsers", JSON.stringify(updatedUsers));
     toast.success("Usuário removido com sucesso!");
   };
 
@@ -99,8 +116,18 @@ const UserManagement = () => {
                 />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="driverLicense" className="block text-sm font-medium">CNH</label>
+                <Input
+                  id="driverLicense"
+                  value={driverLicense}
+                  onChange={(e) => setDriverLicense(e.target.value)}
+                  placeholder="Número da CNH"
+                />
+              </div>
+              
               <div className="space-y-2">
                 <label htmlFor="password" className="block text-sm font-medium">Senha</label>
                 <Input
@@ -111,17 +138,17 @@ const UserManagement = () => {
                   placeholder="Senha"
                 />
               </div>
-              
-              <div className="flex items-end space-x-2 h-full pb-2">
-                <Checkbox 
-                  id="admin" 
-                  checked={isAdmin} 
-                  onCheckedChange={(checked) => setIsAdmin(checked === true)}
-                />
-                <label htmlFor="admin" className="text-sm font-medium">
-                  Administrador
-                </label>
-              </div>
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="admin" 
+                checked={isAdmin} 
+                onCheckedChange={(checked) => setIsAdmin(checked === true)}
+              />
+              <label htmlFor="admin" className="text-sm font-medium">
+                Administrador
+              </label>
             </div>
             
             <Button 
@@ -144,6 +171,7 @@ const UserManagement = () => {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>CNH</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -153,6 +181,7 @@ const UserManagement = () => {
                 <TableRow key={user.id}>
                   <TableCell>{user.name}</TableCell>
                   <TableCell>{user.email}</TableCell>
+                  <TableCell>{user.driverLicense}</TableCell>
                   <TableCell>
                     {user.isAdmin ? "Administrador" : "Usuário"}
                   </TableCell>

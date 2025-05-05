@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -15,15 +15,13 @@ import { cn } from "@/lib/utils";
 import TimeSelect from "@/components/TimeSelect";
 import FuelLevel from "@/components/FuelLevel";
 
-const carOptions = [
-  { id: 1, name: "Fiat Mobi", lastUsed: true, fuelLevel: 0.8, fuelPins: 5, odometer: 15420 },
-  { id: 2, name: "VW Gol", lastUsed: false, fuelLevel: 0.6, fuelPins: 8, odometer: 45680 },
-  { id: 3, name: "Renault Kwid", lastUsed: false, fuelLevel: 0.5, fuelPins: 6, odometer: 12350 },
-  { id: 4, name: "Fiat Argo", lastUsed: false, fuelLevel: 0.9, fuelPins: 12, odometer: 8750 }
-];
-
 const CarRequest = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const carIdFromQuery = queryParams.get('carId');
+  
+  const [cars, setCars] = useState<any[]>([]);
   const [selectedCar, setSelectedCar] = useState("");
   const [date, setDate] = useState<Date>(new Date());
   const [startTime, setStartTime] = useState("09:00");
@@ -31,23 +29,50 @@ const CarRequest = () => {
   const [fuelPins, setFuelPins] = useState(5);
   const [initialOdometer, setInitialOdometer] = useState(0);
   
-  // Auto-select the last used car
+  // Carregar carros do localStorage
   useEffect(() => {
-    const lastUsedCar = carOptions.find(car => car.lastUsed);
+    const savedCars = localStorage.getItem("solusCars");
+    const carsData = savedCars 
+      ? JSON.parse(savedCars) 
+      : [
+          { id: 1, name: "Fiat Mobi", lastUsed: true, fuelLevel: 0.8, fuelPins: 5, odometer: 15420, isAvailable: true },
+          { id: 2, name: "VW Gol", lastUsed: false, fuelLevel: 0.6, fuelPins: 8, odometer: 45680, isAvailable: true },
+          { id: 3, name: "Renault Kwid", lastUsed: false, fuelLevel: 0.5, fuelPins: 6, odometer: 12350, isAvailable: true },
+          { id: 4, name: "Fiat Argo", lastUsed: false, fuelLevel: 0.9, fuelPins: 12, odometer: 8750, isAvailable: true }
+        ];
+    
+    // Filtrar apenas carros disponíveis
+    const availableCars = carsData.filter((car: any) => car.isAvailable);
+    setCars(availableCars);
+    
+    // Auto-select do carro baseado no query param ou último usado
+    if (carIdFromQuery) {
+      const selectedCarFromQuery = availableCars.find((car: any) => car.id.toString() === carIdFromQuery);
+      if (selectedCarFromQuery) {
+        setSelectedCar(selectedCarFromQuery.id.toString());
+        setFuelLevel(selectedCarFromQuery.fuelLevel);
+        setFuelPins(selectedCarFromQuery.fuelCapacity || selectedCarFromQuery.fuelPins);
+        setInitialOdometer(selectedCarFromQuery.odometer);
+        return;
+      }
+    }
+    
+    // Caso não tenha carro na query ou carro não encontrado, selecionar o último usado
+    const lastUsedCar = availableCars.find(car => car.lastUsed);
     if (lastUsedCar) {
       setSelectedCar(lastUsedCar.id.toString());
       setFuelLevel(lastUsedCar.fuelLevel);
-      setFuelPins(lastUsedCar.fuelPins);
+      setFuelPins(lastUsedCar.fuelCapacity || lastUsedCar.fuelPins);
       setInitialOdometer(lastUsedCar.odometer);
     }
-  }, []);
+  }, [carIdFromQuery]);
 
   const handleCarChange = (value: string) => {
     setSelectedCar(value);
-    const car = carOptions.find(car => car.id.toString() === value);
+    const car = cars.find(car => car.id.toString() === value);
     if (car) {
       setFuelLevel(car.fuelLevel);
-      setFuelPins(car.fuelPins);
+      setFuelPins(car.fuelCapacity || car.fuelPins);
       setInitialOdometer(car.odometer);
     }
   };
@@ -69,6 +94,34 @@ const CarRequest = () => {
       toast.error("Selecione um horário de retirada");
       return;
     }
+    
+    // Atualizar status do carro para não disponível
+    const savedCars = localStorage.getItem("solusCars");
+    if (savedCars) {
+      const allCars = JSON.parse(savedCars);
+      const updatedCars = allCars.map((car: any) => {
+        if (car.id.toString() === selectedCar) {
+          return { ...car, isAvailable: false, lastUsed: true };
+        }
+        return { ...car, lastUsed: false };
+      });
+      
+      localStorage.setItem("solusCars", JSON.stringify(updatedCars));
+    }
+    
+    // Registrar reserva
+    const reservations = JSON.parse(localStorage.getItem("carReservations") || "[]");
+    const newReservation = {
+      id: Date.now(),
+      carId: selectedCar,
+      date: format(date, "yyyy-MM-dd"),
+      startTime,
+      initialOdometer,
+      userId: JSON.parse(localStorage.getItem("solusUser") || '{"id": 1}').id
+    };
+    
+    reservations.push(newReservation);
+    localStorage.setItem("carReservations", JSON.stringify(reservations));
     
     // Success message and redirect
     toast.success("Reserva realizada com sucesso!");
@@ -94,7 +147,7 @@ const CarRequest = () => {
                   <SelectValue placeholder="Selecione um carro" />
                 </SelectTrigger>
                 <SelectContent>
-                  {carOptions.map((car) => (
+                  {cars.map((car) => (
                     <SelectItem key={car.id} value={car.id.toString()}>
                       {car.name} {car.lastUsed ? " (Último reservado)" : ""}
                     </SelectItem>
@@ -130,7 +183,6 @@ const CarRequest = () => {
             </div>
             
             <div className="mb-4">
-              <Label>Horário de Retirada</Label>
               <TimeSelect 
                 label="Horário de Retirada"
                 value={startTime}

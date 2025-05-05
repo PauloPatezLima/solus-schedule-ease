@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -9,17 +9,26 @@ import { Label } from "@/components/ui/label";
 
 // Dados simulados de carros
 const initialCars = [
-  { id: 1, name: "Fiat Mobi", plate: "ABC-1234", fuelCapacity: 5 },
-  { id: 2, name: "VW Gol", plate: "XYZ-5678", fuelCapacity: 8 },
-  { id: 3, name: "Renault Kwid", plate: "DEF-9012", fuelCapacity: 6 },
-  { id: 4, name: "Fiat Argo", plate: "GHI-3456", fuelCapacity: 12 },
+  { id: 1, name: "Fiat Mobi", plate: "ABC-1234", fuelCapacity: 5, isAvailable: true, fuelLevel: 0.8, odometer: 15420 },
+  { id: 2, name: "VW Gol", plate: "XYZ-5678", fuelCapacity: 8, isAvailable: true, fuelLevel: 0.6, odometer: 45680 },
+  { id: 3, name: "Renault Kwid", plate: "DEF-9012", fuelCapacity: 6, isAvailable: true, fuelLevel: 0.5, odometer: 12350 },
+  { id: 4, name: "Fiat Argo", plate: "GHI-3456", fuelCapacity: 12, isAvailable: true, fuelLevel: 0.9, odometer: 8750 },
 ];
 
 const CarManagement = () => {
-  const [cars, setCars] = useState(initialCars);
+  const [cars, setCars] = useState(() => {
+    const savedCars = localStorage.getItem("solusCars");
+    return savedCars ? JSON.parse(savedCars) : initialCars;
+  });
+  
   const [name, setName] = useState("");
   const [plate, setPlate] = useState("");
   const [fuelCapacity, setFuelCapacity] = useState(8);
+
+  // Salvar carros no localStorage quando houver alterações
+  useEffect(() => {
+    localStorage.setItem("solusCars", JSON.stringify(cars));
+  }, [cars]);
 
   const handleAddCar = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +50,10 @@ const CarManagement = () => {
       id: cars.length + 1,
       name,
       plate,
-      fuelCapacity
+      fuelCapacity,
+      isAvailable: true,
+      fuelLevel: 1, // Tanque cheio ao cadastrar
+      odometer: 0
     };
     
     setCars([...cars, newCar]);
@@ -122,6 +134,7 @@ const CarManagement = () => {
                 <TableHead>Modelo</TableHead>
                 <TableHead>Placa</TableHead>
                 <TableHead>Capacidade</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -131,6 +144,11 @@ const CarManagement = () => {
                   <TableCell>{car.name}</TableCell>
                   <TableCell>{car.plate}</TableCell>
                   <TableCell>{car.fuelCapacity} pins</TableCell>
+                  <TableCell>
+                    <span className={car.isAvailable ? "text-green-500" : "text-yellow-500"}>
+                      {car.isAvailable ? "Disponível" : "Reservado"}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="destructive"

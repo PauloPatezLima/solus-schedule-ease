@@ -1,22 +1,32 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import ResourceCard from "@/components/ResourceCard";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 
-// Dummy data for car availability
-const carsData = [
-  { id: 1, name: "Fiat Mobi", isAvailable: true, fuelLevel: 0.75, plate: "ABC-1234" },
-  { id: 2, name: "VW Gol", isAvailable: false, fuelLevel: 0.5, plate: "XYZ-5678" },
-  { id: 3, name: "Renault Kwid", isAvailable: true, fuelLevel: 1, plate: "DEF-9012" }
-];
-
 const CarBooking = () => {
   const navigate = useNavigate();
-  const [cars] = useState(carsData);
+  const [cars, setCars] = useState<any[]>([]);
   const today = new Date();
+  
+  // Carregar carros do localStorage
+  useEffect(() => {
+    const savedCars = localStorage.getItem("solusCars");
+    if (savedCars) {
+      setCars(JSON.parse(savedCars));
+    } else {
+      // Dados iniciais se não existir no localStorage
+      const initialCars = [
+        { id: 1, name: "Fiat Mobi", isAvailable: true, fuelLevel: 0.75, plate: "ABC-1234" },
+        { id: 2, name: "VW Gol", isAvailable: false, fuelLevel: 0.5, plate: "XYZ-5678" },
+        { id: 3, name: "Renault Kwid", isAvailable: true, fuelLevel: 1, plate: "DEF-9012" }
+      ];
+      setCars(initialCars);
+      localStorage.setItem("solusCars", JSON.stringify(initialCars));
+    }
+  }, []);
   
   const getFuelLevelText = (level: number) => {
     if (level === 0) return "Vazio";
@@ -49,6 +59,8 @@ const CarBooking = () => {
                 onClick={() => {
                   if (car.isAvailable) {
                     navigate(`/carros/solicitar?carId=${car.id}&carName=${car.name}&fuelLevel=${car.fuelLevel}`);
+                  } else {
+                    toast.error("Este carro já está reservado");
                   }
                 }}
               />

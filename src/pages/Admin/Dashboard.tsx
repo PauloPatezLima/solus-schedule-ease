@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,10 +9,12 @@ import CarHistory from "./CarHistory";
 import RoomManagement from "./RoomManagement";
 import CarManagement from "./CarManagement";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("usuarios");
+  const isMobile = useIsMobile();
   
   const handleLogout = () => {
     localStorage.removeItem("solusUser");
@@ -38,12 +40,12 @@ const AdminDashboard = () => {
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5 mb-8">
-            <TabsTrigger value="usuarios">Usuários</TabsTrigger>
-            <TabsTrigger value="salas">Gerenciar Salas</TabsTrigger>
-            <TabsTrigger value="carros">Gerenciar Carros</TabsTrigger>
-            <TabsTrigger value="historico-salas">Histórico Salas</TabsTrigger>
-            <TabsTrigger value="historico-carros">Histórico Carros</TabsTrigger>
+          <TabsList className={`grid w-full ${isMobile ? 'grid-cols-2 gap-2' : 'grid-cols-5'} mb-8`}>
+            <TabsTrigger value="usuarios" className={isMobile ? "mb-1" : ""}>Usuários</TabsTrigger>
+            <TabsTrigger value="salas" className={isMobile ? "mb-1" : ""}>Salas</TabsTrigger>
+            <TabsTrigger value="carros" className={isMobile ? "mb-1" : ""}>Carros</TabsTrigger>
+            <TabsTrigger value="historico-salas" className={isMobile ? "mb-1" : ""}>Hist. Salas</TabsTrigger>
+            <TabsTrigger value="historico-carros" className={isMobile ? "mb-1" : ""}>Hist. Carros</TabsTrigger>
           </TabsList>
           
           <TabsContent value="usuarios">
