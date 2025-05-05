@@ -21,9 +21,9 @@ const ResourceCard = ({
       }`}
       onClick={onClick}
     >
-      <div className="flex justify-between">
-        <h3 className="font-semibold text-lg">{name}</h3>
-        <span className={`text-sm rounded-full px-3 py-1 ${
+      <div className="flex flex-col sm:flex-row sm:justify-between">
+        <h3 className="font-semibold text-lg mb-1 sm:mb-0">{name}</h3>
+        <span className={`text-sm rounded-full px-3 py-1 inline-block w-max ${
           isAvailable ? "bg-solus-secondary/20 text-solus-secondary" : "bg-solus-warning/20 text-solus-warning"
         }`}>
           {isAvailable ? "Disponível" : "Ocupado"}

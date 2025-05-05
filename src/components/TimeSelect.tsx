@@ -12,11 +12,11 @@ interface TimeSelectProps {
 }
 
 const TimeSelect = ({ label, value, onChange, className }: TimeSelectProps) => {
-  // Generate hours (8:00 to 18:00)
+  // Generate all 24 hours with 15-minute intervals
   const hours = [];
-  for (let i = 8; i <= 18; i++) {
+  for (let i = 0; i < 24; i++) {
     const hour = i < 10 ? `0${i}` : `${i}`;
-    // Only include minutes 00, 15, 30, 45
+    // Include minutes 00, 15, 30, 45
     ["00", "15", "30", "45"].forEach(minute => {
       hours.push(`${hour}:${minute}`);
     });
@@ -29,7 +29,7 @@ const TimeSelect = ({ label, value, onChange, className }: TimeSelectProps) => {
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Selecione o horário" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-h-[300px]">
           {hours.map((time) => (
             <SelectItem key={time} value={time}>
               {time}

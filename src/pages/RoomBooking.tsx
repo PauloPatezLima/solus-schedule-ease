@@ -6,6 +6,7 @@ import ResourceCard from "@/components/ResourceCard";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Dummy data for room availability
 const initialRoomsData = [
@@ -16,6 +17,7 @@ const initialRoomsData = [
 
 const RoomBooking = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [rooms, setRooms] = useState(() => {
     const savedRooms = localStorage.getItem("solusRooms");
     return savedRooms ? JSON.parse(savedRooms) : initialRoomsData;

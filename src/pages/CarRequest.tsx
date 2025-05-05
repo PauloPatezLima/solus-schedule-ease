@@ -14,6 +14,7 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import TimeSelect from "@/components/TimeSelect";
 import FuelLevel from "@/components/FuelLevel";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const CarRequest = () => {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ const CarRequest = () => {
   const queryParams = new URLSearchParams(location.search);
   const carIdFromQuery = queryParams.get('carId');
   const carNameFromQuery = queryParams.get('carName');
+  const isMobile = useIsMobile();
   
   const [cars, setCars] = useState<any[]>([]);
   const [selectedCar, setSelectedCar] = useState("");
@@ -48,23 +50,22 @@ const CarRequest = () => {
     
     // Auto-select do carro baseado no query param ou último usado
     if (carIdFromQuery) {
-      const selectedCarFromQuery = availableCars.find((car: any) => car.id.toString() === carIdFromQuery);
+      const selectedCarFromQuery = carsData.find((car: any) => car.id.toString() === carIdFromQuery);
       if (selectedCarFromQuery) {
         setSelectedCar(selectedCarFromQuery.id.toString());
         setFuelLevel(selectedCarFromQuery.fuelLevel);
         setFuelPins(selectedCarFromQuery.fuelCapacity || selectedCarFromQuery.fuelPins);
         setInitialOdometer(selectedCarFromQuery.odometer);
-        return;
       }
-    }
-    
-    // Caso não tenha carro na query ou carro não encontrado, selecionar o último usado
-    const lastUsedCar = availableCars.find(car => car.lastUsed);
-    if (lastUsedCar) {
-      setSelectedCar(lastUsedCar.id.toString());
-      setFuelLevel(lastUsedCar.fuelLevel);
-      setFuelPins(lastUsedCar.fuelCapacity || lastUsedCar.fuelPins);
-      setInitialOdometer(lastUsedCar.odometer);
+    } else {
+      // Caso não tenha carro na query ou carro não encontrado, selecionar o último usado
+      const lastUsedCar = availableCars.find(car => car.lastUsed);
+      if (lastUsedCar) {
+        setSelectedCar(lastUsedCar.id.toString());
+        setFuelLevel(lastUsedCar.fuelLevel);
+        setFuelPins(lastUsedCar.fuelCapacity || lastUsedCar.fuelPins);
+        setInitialOdometer(lastUsedCar.odometer);
+      }
     }
   }, [carIdFromQuery]);
 

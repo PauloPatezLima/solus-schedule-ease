@@ -6,9 +6,11 @@ import ResourceCard from "@/components/ResourceCard";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const CarBooking = () => {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [cars, setCars] = useState<any[]>([]);
   const today = new Date();
   
@@ -69,15 +71,15 @@ const CarBooking = () => {
           </div>
         </div>
         
-        <div className="flex justify-center space-x-4">
+        <div className={`flex ${isMobile ? 'flex-col space-y-4' : 'flex-row space-x-4'} justify-center`}>
           <Button 
-            className="option-button"
+            className="option-button w-full sm:w-auto"
             onClick={() => navigate("/carros/solicitar")}
           >
             Solicitar Reserva
           </Button>
           <Button 
-            className="bg-solus-warning text-white py-3 px-6 rounded-md hover:bg-opacity-90 transition-all font-medium"
+            className="bg-solus-warning text-white py-3 px-6 rounded-md hover:bg-opacity-90 transition-all font-medium w-full sm:w-auto"
             onClick={() => navigate("/carros/devolver")}
           >
             Registrar Devolução
