@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { LogIn } from "lucide-react";
 
 // Dados padrão caso não haja usuários cadastrados
 const defaultUsers = [
@@ -17,18 +18,26 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [users, setUsers] = useState(() => {
+  
+  // Função para buscar todos os usuários (default + cadastrados)
+  const getAllUsers = () => {
     const savedUsers = localStorage.getItem("solusUsers");
     return savedUsers ? JSON.parse(savedUsers) : defaultUsers;
-  });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulando uma verificação de login com os usuários do localStorage
+    // Buscar todos os usuários
+    const users = getAllUsers();
+    
+    // Log para debug
+    console.log("Tentando login com:", { email, password });
+    console.log("Usuários disponíveis:", users);
+
+    // Verificar usuários padrão e cadastrados
     setTimeout(() => {
-      // Verificar usuários padrão e cadastrados
       const user = users.find(
         (user) => user.email === email && user.password === password
       );
@@ -54,6 +63,19 @@ const Login = () => {
       setIsLoading(false);
     }, 500);
   };
+
+  // Verificar se já existe um usuário logado
+  useEffect(() => {
+    const loggedUser = localStorage.getItem("solusUser");
+    if (loggedUser) {
+      const user = JSON.parse(loggedUser);
+      if (user.isAdmin) {
+        navigate("/admin");
+      } else {
+        navigate("/");
+      }
+    }
+  }, [navigate]);
 
   return (
     <div className="min-h-screen bg-solus-light flex flex-col justify-center items-center p-4">
@@ -116,7 +138,12 @@ const Login = () => {
               disabled={isLoading} 
               className="w-full bg-solus-primary hover:bg-solus-primary/90"
             >
-              {isLoading ? "Entrando..." : "Entrar"}
+              {isLoading ? "Entrando..." : (
+                <>
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Entrar
+                </>
+              )}
             </Button>
           </CardFooter>
         </Card>
