@@ -22,7 +22,35 @@ const Login = () => {
   // Função para buscar todos os usuários (default + cadastrados)
   const getAllUsers = () => {
     const savedUsers = localStorage.getItem("solusUsers");
-    return savedUsers ? JSON.parse(savedUsers) : defaultUsers;
+    
+    // Certifica-se de que estamos retornando um array com todos os usuários
+    if (savedUsers) {
+      try {
+        // Parse os usuários salvos
+        const parsedUsers = JSON.parse(savedUsers);
+        
+        // Verifica se já temos os usuários padrão incluídos no array salvo
+        const hasAdmin = parsedUsers.some(user => user.email === "admin@solus.com");
+        const hasUser = parsedUsers.some(user => user.email === "usuario@solus.com");
+        
+        // Se não tivermos os usuários padrão, os adicionamos
+        if (!hasAdmin || !hasUser) {
+          const usersToAdd = [];
+          if (!hasAdmin) usersToAdd.push(defaultUsers[0]);
+          if (!hasUser) usersToAdd.push(defaultUsers[1]);
+          
+          // Juntar os usuários salvos com os padrão que estavam faltando
+          return [...parsedUsers, ...usersToAdd];
+        }
+        
+        return parsedUsers;
+      } catch (error) {
+        console.error("Erro ao analisar usuários salvos:", error);
+        return defaultUsers;
+      }
+    }
+    
+    return defaultUsers;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -38,25 +66,37 @@ const Login = () => {
 
     // Verificar usuários padrão e cadastrados
     setTimeout(() => {
-      const user = users.find(
-        (user) => user.email === email && user.password === password
-      );
-
-      if (user) {
+      // Verificação de login mais detalhada para debug
+      let foundUser = null;
+      let matchEmail = false;
+      
+      for (const user of users) {
+        if (user.email === email) {
+          matchEmail = true;
+          if (user.password === password) {
+            foundUser = user;
+            break;
+          }
+        }
+      }
+      
+      if (foundUser) {
+        console.log("Usuário encontrado:", foundUser);
         // Armazenando dados do usuário logado
         localStorage.setItem("solusUser", JSON.stringify({ 
-          email: user.email, 
-          isAdmin: user.isAdmin 
+          email: foundUser.email, 
+          isAdmin: foundUser.isAdmin 
         }));
         
         toast.success("Login realizado com sucesso!");
         
-        if (user.isAdmin) {
+        if (foundUser.isAdmin) {
           navigate("/admin");
         } else {
           navigate("/");
         }
       } else {
+        console.log("Falha no login. Email encontrado:", matchEmail);
         toast.error("Email ou senha inválidos");
       }
       
