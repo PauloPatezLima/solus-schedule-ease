@@ -1,13 +1,13 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
-// Simulação de dados de usuário
-const users = [
+// Dados padrão caso não haja usuários cadastrados
+const defaultUsers = [
   { email: "admin@solus.com", password: "admin123", isAdmin: true },
   { email: "usuario@solus.com", password: "user123", isAdmin: false },
 ];
@@ -17,13 +17,18 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [users, setUsers] = useState(() => {
+    const savedUsers = localStorage.getItem("solusUsers");
+    return savedUsers ? JSON.parse(savedUsers) : defaultUsers;
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    // Simulando uma verificação de login
+    // Simulando uma verificação de login com os usuários do localStorage
     setTimeout(() => {
+      // Verificar usuários padrão e cadastrados
       const user = users.find(
         (user) => user.email === email && user.password === password
       );

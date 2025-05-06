@@ -7,13 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Edit } from "lucide-react";
 
 // Dados simulados de usuários
 const initialUsers = [
-  { id: 1, name: "Administrador", email: "admin@solus.com", driverLicense: "12345678900", driverLicenseFile: null, isAdmin: true },
-  { id: 2, name: "Usuário Teste", email: "usuario@solus.com", driverLicense: "98765432100", driverLicenseFile: null, isAdmin: false },
+  { id: 1, name: "Administrador", email: "admin@solus.com", password: "admin123", driverLicense: "12345678900", driverLicenseFile: null, isAdmin: true },
+  { id: 2, name: "Usuário Teste", email: "usuario@solus.com", password: "user123", driverLicense: "98765432100", driverLicenseFile: null, isAdmin: false },
 ];
 
 const UserManagement = () => {
@@ -38,6 +38,8 @@ const UserManagement = () => {
   const [editDriverLicense, setEditDriverLicense] = useState("");
   const [editDriverLicenseFile, setEditDriverLicenseFile] = useState<File | null>(null);
   const [editIsAdmin, setEditIsAdmin] = useState(false);
+  const [editPassword, setEditPassword] = useState("");
+  const [changePassword, setChangePassword] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAddUser = (e: React.FormEvent) => {
@@ -80,6 +82,7 @@ const UserManagement = () => {
         id: users.length + 1,
         name,
         email,
+        password, // Incluir senha no objeto de usuário
         driverLicense,
         driverLicenseFile: {
           name: driverLicenseFile.name,
@@ -128,6 +131,8 @@ const UserManagement = () => {
     setEditEmail(user.email);
     setEditDriverLicense(user.driverLicense);
     setEditIsAdmin(user.isAdmin);
+    setChangePassword(false);
+    setEditPassword("");
     setIsEditOpen(true);
   };
 
@@ -136,6 +141,12 @@ const UserManagement = () => {
     
     if (!editName.trim() || !editEmail.trim() || !editDriverLicense.trim()) {
       toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+    
+    // Verificar se a nova senha tem pelo menos 6 caracteres (se estiver sendo alterada)
+    if (changePassword && editPassword.length < 6) {
+      toast.error("A senha deve ter pelo menos 6 caracteres");
       return;
     }
     
@@ -155,6 +166,8 @@ const UserManagement = () => {
             name: editName,
             email: editEmail,
             driverLicense: editDriverLicense,
+            // Atualizar a senha apenas se a opção foi selecionada
+            password: changePassword ? editPassword : user.password,
             driverLicenseFile: driverLicenseFileData !== undefined 
               ? driverLicenseFileData 
               : user.driverLicenseFile,
@@ -394,6 +407,9 @@ const UserManagement = () => {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogDescription>
+              Edite as informações do usuário abaixo.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleEditUser} className="space-y-4 pt-4">
             <div className="space-y-4">
@@ -423,6 +439,32 @@ const UserManagement = () => {
                   value={editDriverLicense}
                   onChange={(e) => setEditDriverLicense(e.target.value)}
                 />
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2 mb-2">
+                  <Checkbox 
+                    id="changePassword" 
+                    checked={changePassword} 
+                    onCheckedChange={(checked) => setChangePassword(checked === true)}
+                  />
+                  <label htmlFor="changePassword" className="text-sm font-medium">
+                    Alterar senha
+                  </label>
+                </div>
+                
+                {changePassword && (
+                  <div className="space-y-2">
+                    <Label htmlFor="editPassword">Nova Senha</Label>
+                    <Input
+                      id="editPassword"
+                      type="password"
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      placeholder="Nova senha"
+                    />
+                  </div>
+                )}
               </div>
               
               <div className="space-y-2">
