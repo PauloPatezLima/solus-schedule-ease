@@ -51,6 +51,7 @@ const Header = ({ title, showBackButton = true }: HeaderProps) => {
             </button>
           )}
           
+          {/* Só mostrar botão de sair se não estiver no painel admin */}
           {!isAdminPage && (
             <button
               onClick={handleLogout}

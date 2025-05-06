@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
@@ -26,12 +27,13 @@ const CarRequest = () => {
   const [cars, setCars] = useState<any[]>([]);
   const [selectedCar, setSelectedCar] = useState("");
   const [date, setDate] = useState<Date>(new Date());
-  const [startTime, setStartTime] = useState("09:00");
+  const [startTime, setStartTime] = useState("");
   const [fuelLevel, setFuelLevel] = useState(0);
   const [fuelPins, setFuelPins] = useState(5);
   const [initialOdometer, setInitialOdometer] = useState(0);
+  const [occupiedTimes, setOccupiedTimes] = useState<string[]>([]);
   
-  // Carregar carros do localStorage
+  // Carregar carros do localStorage e verificar horários ocupados
   useEffect(() => {
     const savedCars = localStorage.getItem("solusCars");
     const carsData = savedCars 
@@ -68,7 +70,32 @@ const CarRequest = () => {
         setInitialOdometer(lastUsedCar.odometer);
       }
     }
+    
+    // Verificar horários ocupados para o dia selecionado
+    updateOccupiedTimes(date);
   }, [carIdFromQuery, carNameFromQuery]);
+
+  // Atualizar horários ocupados quando a data mudar
+  useEffect(() => {
+    updateOccupiedTimes(date);
+  }, [date]);
+  
+  const updateOccupiedTimes = (selectedDate: Date) => {
+    const reservations = JSON.parse(localStorage.getItem("carReservations") || "[]");
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    
+    // Filtrar reservas para a data selecionada
+    const reservationsForDay = reservations.filter((r: any) => r.date === dateStr);
+    
+    // Extrair horários ocupados
+    const times = reservationsForDay.map((r: any) => r.startTime);
+    setOccupiedTimes(times);
+    
+    // Se o horário atual estiver ocupado, resetar
+    if (times.includes(startTime)) {
+      setStartTime("");
+    }
+  };
 
   const handleCarChange = (value: string) => {
     setSelectedCar(value);
@@ -95,6 +122,12 @@ const CarRequest = () => {
     
     if (!startTime) {
       toast.error("Selecione um horário de retirada");
+      return;
+    }
+    
+    // Verificar se o horário já está ocupado
+    if (occupiedTimes.includes(startTime)) {
+      toast.error("Este horário já está ocupado. Por favor, escolha outro.");
       return;
     }
     
@@ -191,6 +224,7 @@ const CarRequest = () => {
                 value={startTime}
                 onChange={setStartTime}
                 className="w-full"
+                disabled={occupiedTimes}
               />
             </div>
             

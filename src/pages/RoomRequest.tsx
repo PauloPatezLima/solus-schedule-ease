@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 const roomOptions = [
   { id: 1, name: "Sala de Reunião" },
   { id: 2, name: "Sala Coworking" },
-  { id: 3, name: "Sala Colab" }
+  { id: 3, name: "Sala Colab (Aquário)" }
 ];
 
 const RoomRequest = () => {
@@ -30,6 +30,55 @@ const RoomRequest = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [occupiedTimes, setOccupiedTimes] = useState<string[]>([]);
+
+  // Efeito para mostrar toast quando sala for selecionada via query param
+  useEffect(() => {
+    if (roomId && roomName) {
+      const room = roomOptions.find(room => room.id.toString() === roomId);
+      if (room) {
+        toast.info(`Sala ${decodeURIComponent(roomName)} selecionada`);
+      }
+    }
+    
+    // Verificar horários ocupados para o dia selecionado
+    if (date) {
+      updateOccupiedTimes(date);
+    }
+  }, [roomId, roomName]);
+
+  // Atualizar horários ocupados quando a data mudar
+  useEffect(() => {
+    if (date) {
+      updateOccupiedTimes(date);
+    }
+  }, [date]);
+  
+  const updateOccupiedTimes = (selectedDate: Date) => {
+    const reservations = JSON.parse(localStorage.getItem("roomReservations") || "[]");
+    const dateStr = format(selectedDate, "yyyy-MM-dd");
+    
+    // Filtrar reservas para a data selecionada
+    const reservationsForDay = reservations.filter((r: any) => r.date === dateStr && 
+      (selectedRoom ? r.roomId === selectedRoom : true));
+    
+    // Extrair horários ocupados
+    const times = reservationsForDay.flatMap((r: any) => {
+      // Para cada reserva, considerar tanto início quanto fim como ocupados
+      // Isso é simplificado - idealmente verificaríamos todos os slots entre início e fim
+      return [r.startTime, r.endTime];
+    });
+    
+    setOccupiedTimes(times);
+    
+    // Se os horários atuais estiverem ocupados, resetar
+    if (times.includes(startTime)) {
+      setStartTime("");
+    }
+    if (times.includes(endTime)) {
+      setEndTime("");
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +104,37 @@ const RoomRequest = () => {
       return;
     }
     
+    // Verificar se os horários já estão ocupados
+    if (occupiedTimes.includes(startTime) || occupiedTimes.includes(endTime)) {
+      toast.error("Um dos horários selecionados já está ocupado. Por favor, escolha outros.");
+      return;
+    }
+    
+    // Registrar reserva
+    const reservations = JSON.parse(localStorage.getItem("roomReservations") || "[]");
+    const newReservation = {
+      id: Date.now(),
+      roomId: selectedRoom,
+      date: format(date, "yyyy-MM-dd"),
+      startTime,
+      endTime,
+      userId: JSON.parse(localStorage.getItem("solusUser") || '{"id": 1}').id
+    };
+    
+    reservations.push(newReservation);
+    localStorage.setItem("roomReservations", JSON.stringify(reservations));
+    
+    // Atualizar disponibilidade da sala
+    const roomsData = JSON.parse(localStorage.getItem("solusRooms") || "[]");
+    const updatedRooms = roomsData.map((room: any) => {
+      if (room.id.toString() === selectedRoom) {
+        return { ...room, isAvailable: false };
+      }
+      return room;
+    });
+    
+    localStorage.setItem("solusRooms", JSON.stringify(updatedRooms));
+    
     // Success message and redirect
     toast.success("Agendamento solicitado com sucesso!");
     navigate("/salas");
@@ -73,7 +153,13 @@ const RoomRequest = () => {
               <Label htmlFor="room">Sala</Label>
               <Select 
                 value={selectedRoom} 
-                onValueChange={setSelectedRoom}
+                onValueChange={(value) => {
+                  setSelectedRoom(value);
+                  // Atualizar horários ocupados quando sala muda
+                  if (date) {
+                    updateOccupiedTimes(date);
+                  }
+                }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Selecione uma sala" />
@@ -107,7 +193,12 @@ const RoomRequest = () => {
                   <Calendar
                     mode="single"
                     selected={date}
-                    onSelect={setDate}
+                    onSelect={(newDate) => {
+                      if (newDate) {
+                        setDate(newDate);
+                        updateOccupiedTimes(newDate);
+                      }
+                    }}
                     initialFocus
                     disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                     className="p-3"
@@ -120,12 +211,14 @@ const RoomRequest = () => {
               label="Horário de Início" 
               value={startTime} 
               onChange={setStartTime} 
+              disabled={occupiedTimes}
             />
             
             <TimeSelect 
               label="Horário de Fim" 
               value={endTime} 
               onChange={setEndTime} 
+              disabled={occupiedTimes}
             />
             
             <div className="flex justify-end mt-8">
