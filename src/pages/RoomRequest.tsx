@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import Header from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import TimeSelect from "@/components/TimeSelect";
 import { toast } from "sonner";
@@ -54,28 +53,54 @@ const RoomRequest = () => {
     }
   }, [date]);
   
+  // Reset end time when start time changes
+  useEffect(() => {
+    if (startTime) {
+      setEndTime("");
+    }
+  }, [startTime]);
+  
   const updateOccupiedTimes = (selectedDate: Date) => {
     const reservations = JSON.parse(localStorage.getItem("roomReservations") || "[]");
     const dateStr = format(selectedDate, "yyyy-MM-dd");
     
-    // Filtrar reservas para a data selecionada
-    const reservationsForDay = reservations.filter((r: any) => r.date === dateStr && 
-      (selectedRoom ? r.roomId === selectedRoom : true));
+    // Get all reserved time slots for the selected date and room
+    const reservationsForDay = reservations.filter((r: any) => 
+      r.date === dateStr && 
+      (selectedRoom ? r.roomId === selectedRoom : true)
+    );
     
-    // Extrair horários ocupados
-    const times = reservationsForDay.flatMap((r: any) => {
-      // Para cada reserva, considerar tanto início quanto fim como ocupados
-      // Isso é simplificado - idealmente verificaríamos todos os slots entre início e fim
-      return [r.startTime, r.endTime];
+    // Extract all occupied time slots (including slots between start and end)
+    const occupiedSlots: string[] = [];
+    
+    reservationsForDay.forEach((reservation: any) => {
+      const [startHour, startMinute] = reservation.startTime.split(':').map(Number);
+      const [endHour, endMinute] = reservation.endTime.split(':').map(Number);
+      
+      const startTotalMinutes = startHour * 60 + startMinute;
+      const endTotalMinutes = endHour * 60 + endMinute;
+      
+      // Mark all time slots between start and end as occupied
+      for (let i = 0; i < 96; i++) { // 24 hours * 4 (15-minute intervals)
+        const hour = Math.floor(i / 4);
+        const minute = (i % 4) * 15;
+        const totalMinutes = hour * 60 + minute;
+        
+        if (totalMinutes >= startTotalMinutes && totalMinutes <= endTotalMinutes) {
+          const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
+          const minuteStr = minute === 0 ? "00" : `${minute}`;
+          occupiedSlots.push(`${hourStr}:${minuteStr}`);
+        }
+      }
     });
     
-    setOccupiedTimes(times);
+    setOccupiedTimes(occupiedSlots);
     
-    // Se os horários atuais estiverem ocupados, resetar
-    if (times.includes(startTime)) {
+    // Reset times if they're now occupied
+    if (occupiedSlots.includes(startTime)) {
       setStartTime("");
     }
-    if (times.includes(endTime)) {
+    if (occupiedSlots.includes(endTime)) {
       setEndTime("");
     }
   };
@@ -104,13 +129,7 @@ const RoomRequest = () => {
       return;
     }
     
-    // Verificar se os horários já estão ocupados
-    if (occupiedTimes.includes(startTime) || occupiedTimes.includes(endTime)) {
-      toast.error("Um dos horários selecionados já está ocupado. Por favor, escolha outros.");
-      return;
-    }
-    
-    // Registrar reserva
+    // Register reservation
     const reservations = JSON.parse(localStorage.getItem("roomReservations") || "[]");
     const newReservation = {
       id: Date.now(),
@@ -124,7 +143,7 @@ const RoomRequest = () => {
     reservations.push(newReservation);
     localStorage.setItem("roomReservations", JSON.stringify(reservations));
     
-    // Atualizar disponibilidade da sala
+    // Update room availability
     const roomsData = JSON.parse(localStorage.getItem("solusRooms") || "[]");
     const updatedRooms = roomsData.map((room: any) => {
       if (room.id.toString() === selectedRoom) {
@@ -155,7 +174,7 @@ const RoomRequest = () => {
                 value={selectedRoom} 
                 onValueChange={(value) => {
                   setSelectedRoom(value);
-                  // Atualizar horários ocupados quando sala muda
+                  // Update occupied times when room changes
                   if (date) {
                     updateOccupiedTimes(date);
                   }
@@ -219,6 +238,7 @@ const RoomRequest = () => {
               value={endTime} 
               onChange={setEndTime} 
               disabled={occupiedTimes}
+              minTime={startTime} // This enforces end time to be after start time
             />
             
             <div className="flex justify-end mt-8">

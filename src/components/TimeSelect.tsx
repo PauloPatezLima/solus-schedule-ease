@@ -10,9 +10,17 @@ interface TimeSelectProps {
   onChange: (value: string) => void;
   className?: string;
   disabled?: string[];
+  minTime?: string;  // New prop to enforce minimum time selection
 }
 
-const TimeSelect = ({ label, value, onChange, className, disabled = [] }: TimeSelectProps) => {
+const TimeSelect = ({ 
+  label, 
+  value, 
+  onChange, 
+  className, 
+  disabled = [], 
+  minTime 
+}: TimeSelectProps) => {
   // Generate all 24 hours with 15-minute intervals
   const hours = [];
   for (let i = 0; i < 24; i++) {
@@ -22,6 +30,20 @@ const TimeSelect = ({ label, value, onChange, className, disabled = [] }: TimeSe
       hours.push(`${hour}:${minute}`);
     });
   }
+  
+  // Filter available hours based on minTime if provided
+  const availableHours = minTime 
+    ? hours.filter(time => {
+        // Convert times to comparable format (minutes since midnight)
+        const [minHour, minMinute] = minTime.split(':').map(Number);
+        const [timeHour, timeMinute] = time.split(':').map(Number);
+        
+        const minTotalMinutes = minHour * 60 + minMinute;
+        const timeTotalMinutes = timeHour * 60 + timeMinute;
+        
+        return timeTotalMinutes > minTotalMinutes;
+      }) 
+    : hours;
   
   // Find closest time to current time
   useEffect(() => {
@@ -43,17 +65,19 @@ const TimeSelect = ({ label, value, onChange, className, disabled = [] }: TimeSe
       const minuteStr = nearestMinute === 0 ? "00" : `${nearestMinute}`;
       const nearestTime = `${hourStr}:${minuteStr}`;
       
-      // Check if the time is available (not in disabled list)
-      if (!disabled.includes(nearestTime)) {
+      // Check if the time is available (not in disabled list) and respects minTime
+      const isAvailable = !disabled.includes(nearestTime);
+      const respectsMinTime = minTime ? compareTimeStrings(nearestTime, minTime) > 0 : true;
+      
+      if (isAvailable && respectsMinTime) {
         onChange(nearestTime);
       } else {
-        // If the nearest time is disabled, find the next available time
-        const nearestTimeIndex = hours.indexOf(nearestTime);
+        // If the nearest time is disabled or before minTime, find the next available time
         let nextAvailableTime = null;
         
-        for (let i = nearestTimeIndex; i < hours.length; i++) {
-          if (!disabled.includes(hours[i])) {
-            nextAvailableTime = hours[i];
+        for (const time of hours) {
+          if (!disabled.includes(time) && (!minTime || compareTimeStrings(time, minTime) > 0)) {
+            nextAvailableTime = time;
             break;
           }
         }
@@ -63,7 +87,18 @@ const TimeSelect = ({ label, value, onChange, className, disabled = [] }: TimeSe
         }
       }
     }
-  }, []);
+  }, [minTime, disabled]);
+
+  // Utility function to compare time strings
+  const compareTimeStrings = (time1: string, time2: string): number => {
+    const [hour1, minute1] = time1.split(':').map(Number);
+    const [hour2, minute2] = time2.split(':').map(Number);
+    
+    const time1Minutes = hour1 * 60 + minute1;
+    const time2Minutes = hour2 * 60 + minute2;
+    
+    return time1Minutes - time2Minutes;
+  };
 
   return (
     <div className={cn("mb-4", className)}>
@@ -73,7 +108,7 @@ const TimeSelect = ({ label, value, onChange, className, disabled = [] }: TimeSe
           <SelectValue placeholder="Selecione o horário" />
         </SelectTrigger>
         <SelectContent className="max-h-[300px]">
-          {hours.map((time) => (
+          {(minTime ? availableHours : hours).map((time) => (
             <SelectItem 
               key={time} 
               value={time}
