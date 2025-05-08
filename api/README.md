@@ -1,21 +1,40 @@
 
 # Backend Flask para o Sistema Solus
 
-Este é o backend em Flask que fornece APIs para o sistema Solus, substituindo o armazenamento local (localStorage) por uma API REST.
+Este é o backend em Flask que fornece APIs para o sistema Solus, usando MySQL como banco de dados.
+
+## Requisitos
+
+- Python 3.8+
+- MySQL 5.7+ ou MariaDB 10.3+
 
 ## Configuração
 
-1. Instale as dependências:
+1. Crie um banco de dados MySQL:
+```sql
+CREATE DATABASE solus_db;
+```
+
+2. Configure o arquivo `.env` com suas credenciais MySQL:
+```
+MYSQL_USER=seu_usuario
+MYSQL_PASSWORD=sua_senha
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=solus_db
+```
+
+3. Instale as dependências:
 ```
 pip install -r requirements.txt
 ```
 
-2. Execute o servidor:
+4. Execute o servidor:
 ```
 python app.py
 ```
 
-O servidor será executado em `http://localhost:5000`.
+O servidor será executado em `http://localhost:5000` e criará automaticamente todas as tabelas necessárias.
 
 ## APIs disponíveis
 
@@ -45,12 +64,10 @@ O servidor será executado em `http://localhost:5000`.
 - `PUT /api/users/<user_id>` - Atualizar um usuário
 - `DELETE /api/users/<user_id>` - Excluir um usuário
 
-## Estrutura de Arquivos de Dados
+## Estrutura do Banco de Dados
 
-Os dados são armazenados em arquivos JSON na pasta `data`:
-
-- `users.json` - Usuários
-- `rooms.json` - Salas
-- `room_reservations.json` - Reservas de salas
-- `cars.json` - Carros
-- `car_reservations.json` - Reservas de carros
+- `users`: Usuários do sistema
+- `rooms`: Salas disponíveis
+- `room_reservations`: Reservas de salas
+- `cars`: Carros disponíveis
+- `car_reservations`: Reservas de carros
