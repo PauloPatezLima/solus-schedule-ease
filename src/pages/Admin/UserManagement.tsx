@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Edit } from "lucide-react";
 
 // Dados simulados de usuários
@@ -411,103 +412,104 @@ const UserManagement = () => {
               Edite as informações do usuário abaixo.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleEditUser} className="space-y-4 pt-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="editName">Nome</Label>
-                <Input
-                  id="editName"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="editEmail">Email</Label>
-                <Input
-                  id="editEmail"
-                  type="email"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="editDriverLicense">CNH</Label>
-                <Input
-                  id="editDriverLicense"
-                  value={editDriverLicense}
-                  onChange={(e) => setEditDriverLicense(e.target.value)}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Checkbox 
-                    id="changePassword" 
-                    checked={changePassword} 
-                    onCheckedChange={(checked) => setChangePassword(checked === true)}
+          <ScrollArea className="max-h-[60vh]">
+            <form onSubmit={handleEditUser} className="space-y-4 pt-4 px-1">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editName">Nome</Label>
+                  <Input
+                    id="editName"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
                   />
-                  <label htmlFor="changePassword" className="text-sm font-medium">
-                    Alterar senha
-                  </label>
                 </div>
                 
-                {changePassword && (
-                  <div className="space-y-2">
-                    <Label htmlFor="editPassword">Nova Senha</Label>
-                    <Input
-                      id="editPassword"
-                      type="password"
-                      value={editPassword}
-                      onChange={(e) => setEditPassword(e.target.value)}
-                      placeholder="Nova senha"
+                <div className="space-y-2">
+                  <Label htmlFor="editEmail">Email</Label>
+                  <Input
+                    id="editEmail"
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="editDriverLicense">CNH</Label>
+                  <Input
+                    id="editDriverLicense"
+                    value={editDriverLicense}
+                    onChange={(e) => setEditDriverLicense(e.target.value)}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <Checkbox 
+                      id="changePassword" 
+                      checked={changePassword} 
+                      onCheckedChange={(checked) => setChangePassword(checked === true)}
                     />
+                    <label htmlFor="changePassword" className="text-sm font-medium">
+                      Alterar senha
+                    </label>
                   </div>
-                )}
+                  
+                  {changePassword && (
+                    <div className="space-y-2">
+                      <Label htmlFor="editPassword">Nova Senha</Label>
+                      <Input
+                        id="editPassword"
+                        type="password"
+                        value={editPassword}
+                        onChange={(e) => setEditPassword(e.target.value)}
+                        placeholder="Nova senha"
+                      />
+                    </div>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="editDriverLicenseFile">
+                    Documento da CNH (Opcional - Deixe em branco para manter o atual)
+                  </Label>
+                  <Input
+                    id="editDriverLicenseFile"
+                    type="file"
+                    ref={editFileInputRef}
+                    onChange={handleEditFileChange}
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="cursor-pointer"
+                  />
+                  {editDriverLicenseFile && (
+                    <p className="text-xs text-green-600">
+                      Novo arquivo: {editDriverLicenseFile.name}
+                    </p>
+                  )}
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="editIsAdmin" 
+                    checked={editIsAdmin} 
+                    onCheckedChange={(checked) => setEditIsAdmin(checked === true)}
+                    disabled={editingUser?.id === 1} // Não permitir mudar o status do admin principal
+                  />
+                  <label htmlFor="editIsAdmin" className="text-sm font-medium">
+                    Administrador
+                  </label>
+                </div>
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="editDriverLicenseFile">
-                  Documento da CNH (Opcional - Deixe em branco para manter o atual)
-                </Label>
-                <Input
-                  id="editDriverLicenseFile"
-                  type="file"
-                  ref={editFileInputRef}
-                  onChange={handleEditFileChange}
-                  accept=".pdf,.jpg,.jpeg,.png"
-                  className="cursor-pointer"
-                />
-                {editDriverLicenseFile && (
-                  <p className="text-xs text-green-600">
-                    Novo arquivo: {editDriverLicenseFile.name}
-                  </p>
-                )}
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="editIsAdmin" 
-                  checked={editIsAdmin} 
-                  onCheckedChange={(checked) => setEditIsAdmin(checked === true)}
-                  disabled={editingUser?.id === 1} // Não permitir mudar o status do admin principal
-                />
-                <label htmlFor="editIsAdmin" className="text-sm font-medium">
-                  Administrador
-                </label>
-              </div>
-            </div>
-            
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" className="bg-solus-primary hover:bg-solus-primary/90">
-                Salvar Alterações
-              </Button>
-            </DialogFooter>
-          </form>
+            </form>
+          </ScrollArea>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleEditUser} className="bg-solus-primary hover:bg-solus-primary/90">
+              Salvar Alterações
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

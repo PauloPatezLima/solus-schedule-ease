@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
@@ -83,17 +82,27 @@ const CarRequest = () => {
   const updateOccupiedTimes = (selectedDate: Date) => {
     const reservations = JSON.parse(localStorage.getItem("carReservations") || "[]");
     const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const today = format(new Date(), "yyyy-MM-dd");
     
-    // Filtrar reservas para a data selecionada
-    const reservationsForDay = reservations.filter((r: any) => r.date === dateStr);
+    // Filtrar reservas para a data selecionada e para o carro selecionado (se houver)
+    const reservationsForDay = reservations.filter((r: any) => 
+      r.date === dateStr && 
+      (selectedCar ? r.carId === selectedCar : true)
+    );
     
-    // Extrair horários ocupados
-    const times = reservationsForDay.map((r: any) => r.startTime);
-    setOccupiedTimes(times);
-    
-    // Se o horário atual estiver ocupado, resetar
-    if (times.includes(startTime)) {
-      setStartTime("");
+    // Se for uma data futura, não importa se o horário está ocupado hoje
+    if (dateStr === today) {
+      // Para hoje, considerar todos os horários ocupados
+      const times = reservationsForDay.map((r: any) => r.startTime);
+      setOccupiedTimes(times);
+      
+      // Se o horário atual estiver ocupado, resetar
+      if (times.includes(startTime)) {
+        setStartTime("");
+      }
+    } else {
+      // Para datas futuras, não considerar horários ocupados de hoje
+      setOccupiedTimes([]);
     }
   };
 

@@ -63,45 +63,52 @@ const RoomRequest = () => {
   const updateOccupiedTimes = (selectedDate: Date) => {
     const reservations = JSON.parse(localStorage.getItem("roomReservations") || "[]");
     const dateStr = format(selectedDate, "yyyy-MM-dd");
+    const today = format(new Date(), "yyyy-MM-dd");
     
-    // Get all reserved time slots for the selected date and room
-    const reservationsForDay = reservations.filter((r: any) => 
-      r.date === dateStr && 
-      (selectedRoom ? r.roomId === selectedRoom : true)
-    );
-    
-    // Extract all occupied time slots (including slots between start and end)
-    const occupiedSlots: string[] = [];
-    
-    reservationsForDay.forEach((reservation: any) => {
-      const [startHour, startMinute] = reservation.startTime.split(':').map(Number);
-      const [endHour, endMinute] = reservation.endTime.split(':').map(Number);
+    // Só considerar horários ocupados para a data atual
+    if (dateStr === today) {
+      // Get all reserved time slots for the selected date and room
+      const reservationsForDay = reservations.filter((r: any) => 
+        r.date === dateStr && 
+        (selectedRoom ? r.roomId === selectedRoom : true)
+      );
       
-      const startTotalMinutes = startHour * 60 + startMinute;
-      const endTotalMinutes = endHour * 60 + endMinute;
+      // Extract all occupied time slots (including slots between start and end)
+      const occupiedSlots: string[] = [];
       
-      // Mark all time slots between start and end as occupied
-      for (let i = 0; i < 96; i++) { // 24 hours * 4 (15-minute intervals)
-        const hour = Math.floor(i / 4);
-        const minute = (i % 4) * 15;
-        const totalMinutes = hour * 60 + minute;
+      reservationsForDay.forEach((reservation: any) => {
+        const [startHour, startMinute] = reservation.startTime.split(':').map(Number);
+        const [endHour, endMinute] = reservation.endTime.split(':').map(Number);
         
-        if (totalMinutes >= startTotalMinutes && totalMinutes <= endTotalMinutes) {
-          const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
-          const minuteStr = minute === 0 ? "00" : `${minute}`;
-          occupiedSlots.push(`${hourStr}:${minuteStr}`);
+        const startTotalMinutes = startHour * 60 + startMinute;
+        const endTotalMinutes = endHour * 60 + endMinute;
+        
+        // Mark all time slots between start and end as occupied
+        for (let i = 0; i < 96; i++) { // 24 hours * 4 (15-minute intervals)
+          const hour = Math.floor(i / 4);
+          const minute = (i % 4) * 15;
+          const totalMinutes = hour * 60 + minute;
+          
+          if (totalMinutes >= startTotalMinutes && totalMinutes <= endTotalMinutes) {
+            const hourStr = hour < 10 ? `0${hour}` : `${hour}`;
+            const minuteStr = minute === 0 ? "00" : `${minute}`;
+            occupiedSlots.push(`${hourStr}:${minuteStr}`);
+          }
         }
+      });
+      
+      setOccupiedTimes(occupiedSlots);
+      
+      // Reset times if they're now occupied
+      if (occupiedSlots.includes(startTime)) {
+        setStartTime("");
       }
-    });
-    
-    setOccupiedTimes(occupiedSlots);
-    
-    // Reset times if they're now occupied
-    if (occupiedSlots.includes(startTime)) {
-      setStartTime("");
-    }
-    if (occupiedSlots.includes(endTime)) {
-      setEndTime("");
+      if (occupiedSlots.includes(endTime)) {
+        setEndTime("");
+      }
+    } else {
+      // Para datas futuras, não bloquear horários
+      setOccupiedTimes([]);
     }
   };
 
