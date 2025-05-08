@@ -1,0 +1,22 @@
+
+# Arquivos de dados
+data/
+
+# Ambiente virtual
+venv/
+env/
+.env/
+
+# Cache Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Logs
+*.log
+
+# IDEs e editores
+.idea/
+.vscode/
+*.swp
+*.swo
