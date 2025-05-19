@@ -5,9 +5,10 @@ interface FuelLevelProps {
   value: number;
   onChange: (value: number) => void;
   pinCount?: number;
+  readOnly?: boolean;
 }
 
-const FuelLevel = ({ value, onChange, pinCount = 5 }: FuelLevelProps) => {
+const FuelLevel = ({ value, onChange, pinCount = 5, readOnly = false }: FuelLevelProps) => {
   // Gerar os níveis baseado no número de pinos
   const generateLevels = () => {
     const levels = [];
@@ -33,7 +34,8 @@ const FuelLevel = ({ value, onChange, pinCount = 5 }: FuelLevelProps) => {
                   ? 'bg-solus-primary border-solus-primary' 
                   : 'bg-white border-gray-300'
               }`}
-              onClick={() => onChange(level)}
+              onClick={() => !readOnly && onChange(level)}
+              disabled={readOnly}
             />
           ))}
         </div>

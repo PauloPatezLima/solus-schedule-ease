@@ -7,37 +7,48 @@ import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { carService } from "@/services/api";
+
+interface Car {
+  id: number;
+  model: string;
+  plate: string;
+  isAvailable: boolean;
+  fuelLevel: number;
+}
 
 const CarBooking = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const [cars, setCars] = useState<any[]>([]);
+  const [cars, setCars] = useState<Car[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const today = new Date();
   
-  // Carregar carros do localStorage
+  // Carregar carros da API
   useEffect(() => {
-    const savedCars = localStorage.getItem("solusCars");
-    if (savedCars) {
-      setCars(JSON.parse(savedCars));
-    } else {
-      // Dados iniciais se não existir no localStorage
-      const initialCars = [
-        { id: 1, name: "Fiat Mobi", isAvailable: true, fuelLevel: 0.75, plate: "ABC-1234" },
-        { id: 2, name: "VW Gol", isAvailable: false, fuelLevel: 0.5, plate: "XYZ-5678" },
-        { id: 3, name: "Renault Kwid", isAvailable: true, fuelLevel: 1, plate: "DEF-9012" }
-      ];
-      setCars(initialCars);
-      localStorage.setItem("solusCars", JSON.stringify(initialCars));
+    async function loadCars() {
+      try {
+        setIsLoading(true);
+        const carsData = await carService.getCars();
+        setCars(carsData);
+      } catch (error) {
+        console.error("Erro ao carregar carros:", error);
+        toast.error("Erro ao carregar lista de carros");
+      } finally {
+        setIsLoading(false);
+      }
     }
+    
+    loadCars();
   }, []);
   
   const getFuelLevelText = (level: number) => {
-    if (level === 0) return "Vazio";
-    if (level === 0.25) return "1/4";
-    if (level === 0.5) return "1/2";
-    if (level === 0.75) return "3/4";
-    if (level === 1) return "Cheio";
-    return "";
+    const normalizedLevel = level / 100; // Convertendo de 0-100 para 0-1
+    if (normalizedLevel < 0.125) return "Vazio";
+    if (normalizedLevel < 0.375) return "1/4";
+    if (normalizedLevel < 0.625) return "1/2";
+    if (normalizedLevel < 0.875) return "3/4";
+    return "Cheio";
   };
   
   return (
@@ -51,24 +62,34 @@ const CarBooking = () => {
             {format(today, "dd 'de' MMMM 'de' yyyy")}
           </p>
           
-          <div className="divide-y">
-            {cars.map(car => (
-              <ResourceCard
-                key={car.id}
-                name={car.name}
-                isAvailable={car.isAvailable}
-                resourceType="car"
-                details={`Placa: ${car.plate} • Combustível: ${getFuelLevelText(car.fuelLevel)}`}
-                onClick={() => {
-                  if (car.isAvailable) {
-                    navigate(`/carros/solicitar?carId=${car.id}&carName=${encodeURIComponent(car.name)}`);
-                  } else {
-                    toast.error("Este carro já está reservado");
-                  }
-                }}
-              />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="py-8 text-center">
+              <p className="text-gray-500">Carregando carros...</p>
+            </div>
+          ) : (
+            <div className="divide-y">
+              {cars.length === 0 ? (
+                <p className="py-4 text-gray-500 text-center">Nenhum carro disponível</p>
+              ) : (
+                cars.map(car => (
+                  <ResourceCard
+                    key={car.id}
+                    name={car.model}
+                    isAvailable={car.isAvailable}
+                    resourceType="car"
+                    details={`Placa: ${car.plate} • Combustível: ${getFuelLevelText(car.fuelLevel)}`}
+                    onClick={() => {
+                      if (car.isAvailable) {
+                        navigate(`/carros/solicitar?carId=${car.id}&carName=${encodeURIComponent(car.model)}`);
+                      } else {
+                        toast.error("Este carro já está reservado");
+                      }
+                    }}
+                  />
+                ))
+              )}
+            </div>
+          )}
         </div>
         
         <div className={`flex ${isMobile ? 'flex-col space-y-4' : 'flex-row space-x-4'} justify-center`}>

@@ -30,6 +30,8 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
     isAdmin = db.Column(db.Boolean, default=False)
+    driverLicense = db.Column(db.String(20), nullable=True)
+    driverLicenseFile = db.Column(db.Text, nullable=True)
 
 class Room(db.Model):
     __tablename__ = 'rooms'
@@ -57,6 +59,7 @@ class Car(db.Model):
     plate = db.Column(db.String(10), nullable=False, unique=True)
     isAvailable = db.Column(db.Boolean, default=True)
     fuelLevel = db.Column(db.Integer, default=100)
+    odometer = db.Column(db.Integer, default=0, nullable=True)
 
 class CarReservation(db.Model):
     __tablename__ = 'car_reservations'
@@ -65,12 +68,14 @@ class CarReservation(db.Model):
     date = db.Column(db.String(10), nullable=False)  # formato: YYYY-MM-DD
     startTime = db.Column(db.String(5), nullable=False)  # formato: HH:MM
     endTime = db.Column(db.String(5), nullable=True)  # formato: HH:MM (pode ser nulo até a devolução)
-    destination = db.Column(db.String(200), nullable=False)
-    purpose = db.Column(db.String(200), nullable=False)
+    destination = db.Column(db.String(200), nullable=True)
+    purpose = db.Column(db.String(200), nullable=True)
     userId = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     returned = db.Column(db.Boolean, default=False)
     returnTime = db.Column(db.String(5), nullable=True)
     fuelLevelReturn = db.Column(db.Integer, nullable=True)
+    initialOdometer = db.Column(db.Integer, nullable=True)
+    finalOdometer = db.Column(db.Integer, nullable=True)
     notes = db.Column(db.Text, nullable=True)
     
     car = db.relationship('Car', backref=db.backref('reservations', lazy=True))
@@ -86,13 +91,15 @@ with app.app_context():
             name="Admin User",
             email="admin@solus.com",
             password="admin123",
-            isAdmin=True
+            isAdmin=True,
+            driverLicense="12345678900"
         )
         regular_user = User(
             name="Regular User", 
             email="user@solus.com", 
             password="user123", 
-            isAdmin=False
+            isAdmin=False,
+            driverLicense="98765432100"
         )
         db.session.add(admin_user)
         db.session.add(regular_user)
@@ -111,9 +118,10 @@ with app.app_context():
     # Verificar se há carros cadastrados, se não, criar carros padrão
     if Car.query.count() == 0:
         cars = [
-            Car(model="Fiat Uno", plate="ABC-1234", isAvailable=True, fuelLevel=80),
-            Car(model="VW Gol", plate="DEF-5678", isAvailable=True, fuelLevel=95),
-            Car(model="Toyota Corolla", plate="GHI-9012", isAvailable=True, fuelLevel=70)
+            Car(model="Fiat Mobi", plate="ABC-1234", isAvailable=True, fuelLevel=80, odometer=15420),
+            Car(model="VW Gol", plate="DEF-5678", isAvailable=True, fuelLevel=95, odometer=45680),
+            Car(model="Renault Kwid", plate="GHI-9012", isAvailable=True, fuelLevel=70, odometer=12350),
+            Car(model="Fiat Argo", plate="JKL-3456", isAvailable=True, fuelLevel=90, odometer=8750)
         ]
         db.session.add_all(cars)
         db.session.commit()
@@ -222,6 +230,7 @@ def get_car(car_id):
 def get_car_reservations():
     date_filter = request.args.get('date')
     car_id = request.args.get('carId')
+    user_id = request.args.get('userId')
     
     query = CarReservation.query
     
@@ -229,6 +238,8 @@ def get_car_reservations():
         query = query.filter_by(date=date_filter)
     if car_id:
         query = query.filter_by(carId=car_id)
+    if user_id:
+        query = query.filter_by(userId=user_id)
     
     reservations = query.all()
     return jsonify([to_dict(reservation) for reservation in reservations])
@@ -254,19 +265,18 @@ def create_car_reservation():
         carId=data['carId'],
         date=data['date'],
         startTime=data['startTime'],
-        endTime=data.get('endTime'),
-        destination=data['destination'],
-        purpose=data['purpose'],
+        destination=data.get('destination', ''),
+        purpose=data.get('purpose', ''),
         userId=data['userId'],
+        initialOdometer=data.get('initialOdometer', 0),
         returned=False
     )
     
     db.session.add(new_reservation)
     
     # Atualizar disponibilidade do carro para o dia atual
-    if data['date'] == datetime.now().strftime('%Y-%m-%d'):
-        car = Car.query.get(data['carId'])
-        car.isAvailable = False
+    car = Car.query.get(data['carId'])
+    car.isAvailable = False
     
     db.session.commit()
     
@@ -278,19 +288,37 @@ def return_car():
     data = request.json
     reservation_id = data.get('reservationId')
     
-    reservation = CarReservation.query.get_or_404(reservation_id)
+    if not reservation_id:
+        # Se não temos um ID de reserva específico, procuramos por carId
+        car_id = data.get('carId')
+        
+        if not car_id:
+            return jsonify({"success": False, "message": "ID do carro ou da reserva são necessários"}), 400
+            
+        # Buscar a reserva ativa mais recente para este carro
+        reservation = CarReservation.query.filter_by(
+            carId=car_id,
+            returned=False
+        ).order_by(CarReservation.id.desc()).first()
+        
+        if not reservation:
+            return jsonify({"success": False, "message": "Nenhuma reserva ativa encontrada para este carro"}), 404
+    else:
+        reservation = CarReservation.query.get_or_404(reservation_id)
     
     # Atualizar status da reserva
     reservation.returned = True
     reservation.returnTime = data.get('returnTime')
-    reservation.endTime = data.get('endTime')
+    reservation.endTime = data.get('endTime', data.get('returnTime'))
     reservation.fuelLevelReturn = data.get('fuelLevel')
+    reservation.finalOdometer = data.get('finalOdometer')
     reservation.notes = data.get('notes', '')
     
     # Atualizar disponibilidade e nível de combustível do carro
     car = Car.query.get(reservation.carId)
     car.isAvailable = True
     car.fuelLevel = data.get('fuelLevel', car.fuelLevel)
+    car.odometer = data.get('finalOdometer', car.odometer)
     
     db.session.commit()
     
@@ -303,7 +331,8 @@ def get_users():
     # Não enviar senhas para o frontend
     user_list = [to_dict(user) for user in users]
     for user in user_list:
-        del user['password']
+        if 'password' in user:
+            del user['password']
     return jsonify(user_list)
 
 @app.route('/api/users', methods=['POST'])
@@ -318,7 +347,9 @@ def create_user():
         name=data['name'],
         email=data['email'],
         password=data['password'],
-        isAdmin=data.get('isAdmin', False)
+        isAdmin=data.get('isAdmin', False),
+        driverLicense=data.get('driverLicense', ''),
+        driverLicenseFile=data.get('driverLicenseFile')
     )
     
     db.session.add(new_user)
@@ -370,13 +401,36 @@ def delete_user(user_id):
     
     # Armazenar dados do usuário para retornar
     user_dict = to_dict(user)
-    del user_dict['password']
+    if 'password' in user_dict:
+        del user_dict['password']
     
     # Excluir usuário
     db.session.delete(user)
     db.session.commit()
     
     return jsonify({"success": True, "user": user_dict})
+
+# Nova rota para obter reservas ativas do usuário
+@app.route('/api/user-reservations/<int:user_id>', methods=['GET'])
+def get_user_reservations(user_id):
+    # Obter reservas ativas de carros do usuário
+    car_reservations = CarReservation.query.filter_by(
+        userId=user_id,
+        returned=False
+    ).all()
+    
+    # Obter as reservas de salas do usuário para o dia atual
+    today = datetime.now().strftime('%Y-%m-%d')
+    room_reservations = RoomReservation.query.filter_by(
+        userId=user_id,
+        date=today
+    ).all()
+    
+    return jsonify({
+        "success": True,
+        "carReservations": [to_dict(res) for res in car_reservations],
+        "roomReservations": [to_dict(res) for res in room_reservations]
+    })
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
