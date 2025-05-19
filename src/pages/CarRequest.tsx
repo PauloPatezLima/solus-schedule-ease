@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import Header from "@/components/Header";
@@ -177,7 +176,7 @@ const CarRequest = () => {
         startTime,
         destination,
         purpose,
-        initialOdometer,
+        initialOdometer, // Agora está corretamente tipado
         userId: user.id
       });
       

@@ -54,7 +54,7 @@ export const carService = {
     const response = await api.get(`/cars/${id}`);
     return response.data;
   },
-  getCarReservations: async (params?: { date?: string; carId?: string }) => {
+  getCarReservations: async (params?: { date?: string; carId?: string; userId?: string }) => {
     const response = await api.get('/car-reservations', { params });
     return response.data;
   },
@@ -64,6 +64,7 @@ export const carService = {
     startTime: string;
     destination: string;
     purpose: string;
+    initialOdometer?: number;
     userId: number;
   }) => {
     const response = await api.post('/car-reservations', reservation);
@@ -74,6 +75,7 @@ export const carService = {
     returnTime: string;
     endTime: string;
     fuelLevel: number;
+    finalOdometer?: number;
     notes?: string;
   }) => {
     const response = await api.put('/car-return', data);

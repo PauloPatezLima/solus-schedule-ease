@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
@@ -140,7 +139,7 @@ const CarReturn = () => {
         returnTime,
         endTime: returnTime, // Mesmo horário para retorno e fim
         fuelLevel: Math.round(fuelLevel * 100), // Convertendo de 0-1 para 0-100
-        finalOdometer,
+        finalOdometer, // Agora está corretamente tipado
         notes
       });
       
