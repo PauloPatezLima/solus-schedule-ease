@@ -1,4 +1,3 @@
-
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -30,8 +29,9 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
     isAdmin = db.Column(db.Boolean, default=False)
-    driverLicense = db.Column(db.String(20), nullable=True)
-    driverLicenseFile = db.Column(db.Text, nullable=True)
+    # Remover campos que não existem na tabela
+    # driverLicense = db.Column(db.String(20), nullable=True)
+    # driverLicenseFile = db.Column(db.Text, nullable=True)
 
 class Room(db.Model):
     __tablename__ = 'rooms'
@@ -92,14 +92,16 @@ with app.app_context():
             email="admin@solus.com",
             password="admin123",
             isAdmin=True,
-            driverLicense="12345678900"
+            # Remover campos que não existem na tabela
+            # driverLicense="12345678900"
         )
         regular_user = User(
             name="Regular User", 
             email="user@solus.com", 
             password="user123", 
             isAdmin=False,
-            driverLicense="98765432100"
+            # Remover campos que não existem na tabela
+            # driverLicense="98765432100"
         )
         db.session.add(admin_user)
         db.session.add(regular_user)
@@ -145,6 +147,11 @@ def login():
         # Não enviar a senha para o frontend
         user_dict = to_dict(user)
         del user_dict['password']
+        
+        # Adicionar campos de driver license como vazios já que não existem no banco
+        user_dict['driverLicense'] = ''
+        user_dict['driverLicenseFile'] = None
+        
         return jsonify({"success": True, "user": user_dict})
     else:
         return jsonify({"success": False, "message": "Credenciais inválidas"}), 401
@@ -333,6 +340,9 @@ def get_users():
     for user in user_list:
         if 'password' in user:
             del user['password']
+        # Adicionar campos de driver license como vazios já que não existem no banco
+        user['driverLicense'] = ''
+        user['driverLicenseFile'] = None
     return jsonify(user_list)
 
 @app.route('/api/users', methods=['POST'])
@@ -348,8 +358,9 @@ def create_user():
         email=data['email'],
         password=data['password'],
         isAdmin=data.get('isAdmin', False),
-        driverLicense=data.get('driverLicense', ''),
-        driverLicenseFile=data.get('driverLicenseFile')
+        # Remover campos que não existem na tabela
+        # driverLicense=data.get('driverLicense', ''),
+        # driverLicenseFile=data.get('driverLicenseFile')
     )
     
     db.session.add(new_user)
@@ -358,6 +369,10 @@ def create_user():
     # Não enviar a senha para o frontend
     user_dict = to_dict(new_user)
     del user_dict['password']
+    
+    # Adicionar campos de driver license como vazios já que não existem no banco
+    user_dict['driverLicense'] = ''
+    user_dict['driverLicenseFile'] = None
     
     return jsonify({"success": True, "user": user_dict})
 
@@ -372,16 +387,22 @@ def update_user(user_id):
         if existing_user:
             return jsonify({"success": False, "message": "E-mail já cadastrado"}), 409
     
-    # Atualizar usuário
-    for key, value in data.items():
-        if hasattr(user, key):
-            setattr(user, key, value)
+    # Atualizar usuário (apenas os campos que existem na tabela)
+    # Filtrar para incluir apenas campos válidos no modelo
+    valid_fields = ['name', 'email', 'password', 'isAdmin']
+    for key in valid_fields:
+        if key in data:
+            setattr(user, key, data[key])
     
     db.session.commit()
     
     # Não enviar a senha para o frontend
     user_dict = to_dict(user)
     del user_dict['password']
+    
+    # Adicionar campos de driver license como vazios já que não existem no banco
+    user_dict['driverLicense'] = ''
+    user_dict['driverLicenseFile'] = None
     
     return jsonify({"success": True, "user": user_dict})
 

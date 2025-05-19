@@ -94,6 +94,9 @@ export const userService = {
     email: string;
     password: string;
     isAdmin?: boolean;
+    // Mantemos na API, mas sabemos que o backend vai ignorar estes campos
+    driverLicense?: string;
+    driverLicenseFile?: any;
   }) => {
     const response = await api.post('/users', user);
     return response.data;
