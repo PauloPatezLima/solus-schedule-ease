@@ -1,3 +1,4 @@
+
 import axios from 'axios';
 
 const API_URL = 'http://localhost:5000/api';
@@ -97,8 +98,15 @@ export const userService = {
     driverLicense?: string;
     driverLicenseFile?: any;
   }) => {
-    const response = await api.post('/users', user);
-    return response.data;
+    try {
+      console.log("Enviando dados para API:", user);
+      const response = await api.post('/users', user);
+      console.log("Resposta recebida:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao criar usuário:", error);
+      throw error;
+    }
   },
   updateUser: async (id: number, userData: any) => {
     const response = await api.put(`/users/${id}`, userData);

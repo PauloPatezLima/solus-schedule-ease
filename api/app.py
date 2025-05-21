@@ -1,3 +1,4 @@
+
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
@@ -29,9 +30,6 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
     isAdmin = db.Column(db.Boolean, default=False)
-    # Remover campos que não existem na tabela
-    # driverLicense = db.Column(db.String(20), nullable=True)
-    # driverLicenseFile = db.Column(db.Text, nullable=True)
 
 class Room(db.Model):
     __tablename__ = 'rooms'
@@ -91,17 +89,13 @@ with app.app_context():
             name="Admin User",
             email="admin@solus.com",
             password="admin123",
-            isAdmin=True,
-            # Remover campos que não existem na tabela
-            # driverLicense="12345678900"
+            isAdmin=True
         )
         regular_user = User(
             name="Regular User", 
             email="user@solus.com", 
             password="user123", 
-            isAdmin=False,
-            # Remover campos que não existem na tabela
-            # driverLicense="98765432100"
+            isAdmin=False
         )
         db.session.add(admin_user)
         db.session.add(regular_user)
@@ -148,7 +142,7 @@ def login():
         user_dict = to_dict(user)
         del user_dict['password']
         
-        # Adicionar campos de driver license como vazios já que não existem no banco
+        # Adicionar campos de driver license como vazios para manter compatibilidade com frontend
         user_dict['driverLicense'] = ''
         user_dict['driverLicenseFile'] = None
         
@@ -340,7 +334,7 @@ def get_users():
     for user in user_list:
         if 'password' in user:
             del user['password']
-        # Adicionar campos de driver license como vazios já que não existem no banco
+        # Adicionar campos de driver license como vazios para manter compatibilidade com frontend
         user['driverLicense'] = ''
         user['driverLicenseFile'] = None
     return jsonify(user_list)
@@ -348,33 +342,39 @@ def get_users():
 @app.route('/api/users', methods=['POST'])
 def create_user():
     data = request.json
+    print("Dados recebidos:", data)  # Log para debug
     
     # Verificar se o e-mail já está em uso
     if User.query.filter_by(email=data['email']).first():
         return jsonify({"success": False, "message": "E-mail já cadastrado"}), 409
     
-    new_user = User(
-        name=data['name'],
-        email=data['email'],
-        password=data['password'],
-        isAdmin=data.get('isAdmin', False),
-        # Remover campos que não existem na tabela
-        # driverLicense=data.get('driverLicense', ''),
-        # driverLicenseFile=data.get('driverLicenseFile')
-    )
-    
-    db.session.add(new_user)
-    db.session.commit()
-    
-    # Não enviar a senha para o frontend
-    user_dict = to_dict(new_user)
-    del user_dict['password']
-    
-    # Adicionar campos de driver license como vazios já que não existem no banco
-    user_dict['driverLicense'] = ''
-    user_dict['driverLicenseFile'] = None
-    
-    return jsonify({"success": True, "user": user_dict})
+    try:
+        # Criar novo usuário apenas com os campos que existem na tabela
+        new_user = User(
+            name=data['name'],
+            email=data['email'],
+            password=data['password'],
+            isAdmin=data.get('isAdmin', False)
+        )
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        print("Usuário criado com sucesso:", to_dict(new_user))  # Log para debug
+        
+        # Não enviar a senha para o frontend
+        user_dict = to_dict(new_user)
+        del user_dict['password']
+        
+        # Adicionar campos de driver license como vazios para manter compatibilidade com frontend
+        user_dict['driverLicense'] = ''
+        user_dict['driverLicenseFile'] = None
+        
+        return jsonify({"success": True, "user": user_dict})
+    except Exception as e:
+        db.session.rollback()
+        print("Erro ao criar usuário:", str(e))  # Log para debug
+        return jsonify({"success": False, "message": f"Erro ao criar usuário: {str(e)}"}), 500
 
 @app.route('/api/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
@@ -400,7 +400,7 @@ def update_user(user_id):
     user_dict = to_dict(user)
     del user_dict['password']
     
-    # Adicionar campos de driver license como vazios já que não existem no banco
+    # Adicionar campos de driver license como vazios para manter compatibilidade com frontend
     user_dict['driverLicense'] = ''
     user_dict['driverLicenseFile'] = None
     
