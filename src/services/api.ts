@@ -94,9 +94,19 @@ export const userService = {
     email: string;
     password: string;
     isAdmin?: boolean;
+    // Mantemos na API, mas sabemos que o backend vai ignorar estes campos
+    driverLicense?: string;
+    driverLicenseFile?: any;
   }) => {
-    const response = await api.post('/users', user);
-    return response.data;
+    try {
+      console.log("Enviando dados para API:", user);
+      const response = await api.post('/users', user);
+      console.log("Resposta recebida:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Erro ao criar usuário:", error);
+      throw error;
+    }
   },
   updateUser: async (id: number, userData: any) => {
     const response = await api.put(`/users/${id}`, userData);

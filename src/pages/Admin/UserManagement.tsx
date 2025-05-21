@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -10,18 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Edit } from "lucide-react";
-
-// Dados simulados de usuários
-const initialUsers = [
-  { id: 1, name: "Administrador", email: "admin@solus.com", password: "admin123", driverLicense: "12345678900", driverLicenseFile: null, isAdmin: true },
-  { id: 2, name: "Usuário Teste", email: "usuario@solus.com", password: "user123", driverLicense: "98765432100", driverLicenseFile: null, isAdmin: false },
-];
+import { userService } from "@/services/api";
 
 const UserManagement = () => {
-  const [users, setUsers] = useState(() => {
-    const savedUsers = localStorage.getItem("solusUsers");
-    return savedUsers ? JSON.parse(savedUsers) : initialUsers;
-  });
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -43,7 +36,25 @@ const UserManagement = () => {
   const [changePassword, setChangePassword] = useState(false);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAddUser = (e: React.FormEvent) => {
+  // Carregar usuários da API
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true);
+      const data = await userService.getUsers();
+      setUsers(data);
+    } catch (error) {
+      console.error("Erro ao buscar usuários:", error);
+      toast.error("Não foi possível buscar os usuários");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validações simples
@@ -57,12 +68,6 @@ const UserManagement = () => {
       return;
     }
     
-    // Verificar se o email já existe
-    if (users.some(user => user.email === email)) {
-      toast.error("Este email já está em uso");
-      return;
-    }
-
     // Validação simples de CNH
     if (driverLicense.length < 9) {
       toast.error("CNH inválida - deve ter pelo menos 9 caracteres");
@@ -75,72 +80,98 @@ const UserManagement = () => {
       return;
     }
     
-    // Convertemos o arquivo para URL base64 para armazenamento
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      // Adicionar novo usuário
-      const newUser = {
-        id: users.length + 1,
-        name,
-        email,
-        password, // Incluir senha no objeto de usuário
-        driverLicense,
-        driverLicenseFile: {
-          name: driverLicenseFile.name,
-          type: driverLicenseFile.type,
-          data: reader.result
-        },
-        isAdmin
+    // Função para processar o envio do usuário
+    const processFileAndSendUser = () => {
+      // Convertemos o arquivo para URL base64 para armazenamento
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          // Preparar dados do usuário
+          const userData = {
+            name,
+            email,
+            password,
+            driverLicense,
+            driverLicenseFile: {
+              name: driverLicenseFile.name,
+              type: driverLicenseFile.type,
+              data: reader.result
+            },
+            isAdmin
+          };
+          
+          // Chamar a API para criar o usuário
+          const response = await userService.createUser(userData);
+          
+          if (response.success) {
+            toast.success("Usuário cadastrado com sucesso!");
+            
+            // Limpar formulário
+            setName("");
+            setEmail("");
+            setDriverLicense("");
+            setDriverLicenseFile(null);
+            setPassword("");
+            setIsAdmin(false);
+            if (fileInputRef.current) {
+              fileInputRef.current.value = "";
+            }
+            
+            // Atualizar lista de usuários
+            fetchUsers();
+          } else {
+            toast.error(response.message || "Erro ao cadastrar usuário");
+          }
+        } catch (error: any) {
+          console.error("Erro ao cadastrar usuário:", error);
+          toast.error(error.response?.data?.message || "Erro ao cadastrar usuário");
+        }
       };
       
-      const updatedUsers = [...users, newUser];
-      setUsers(updatedUsers);
-      localStorage.setItem("solusUsers", JSON.stringify(updatedUsers));
-      toast.success("Usuário cadastrado com sucesso!");
-      
-      // Limpar formulário
-      setName("");
-      setEmail("");
-      setDriverLicense("");
-      setDriverLicenseFile(null);
-      setPassword("");
-      setIsAdmin(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
+      reader.readAsDataURL(driverLicenseFile);
     };
     
-    reader.readAsDataURL(driverLicenseFile);
+    processFileAndSendUser();
   };
 
-  const handleDeleteUser = (id: number) => {
-    // Não permitir excluir o próprio usuário admin
+  const handleDeleteUser = async (id: number) => {
+    // Não permitir excluir o usuário admin
     if (id === 1) {
       toast.error("Não é possível excluir o administrador principal");
       return;
     }
     
-    const updatedUsers = users.filter(user => user.id !== id);
-    setUsers(updatedUsers);
-    localStorage.setItem("solusUsers", JSON.stringify(updatedUsers));
-    toast.success("Usuário removido com sucesso!");
+    try {
+      const response = await userService.deleteUser(id);
+      
+      if (response.success) {
+        toast.success("Usuário removido com sucesso!");
+        // Atualizar lista de usuários
+        fetchUsers();
+      } else {
+        toast.error(response.message || "Erro ao remover usuário");
+      }
+    } catch (error: any) {
+      console.error("Erro ao remover usuário:", error);
+      toast.error(error.response?.data?.message || "Erro ao remover usuário");
+    }
   };
 
   const openEditModal = (user: any) => {
     setEditingUser(user);
     setEditName(user.name);
     setEditEmail(user.email);
-    setEditDriverLicense(user.driverLicense);
+    setEditDriverLicense(user.driverLicense || "");
     setEditIsAdmin(user.isAdmin);
     setChangePassword(false);
     setEditPassword("");
     setIsEditOpen(true);
   };
 
-  const handleEditUser = (e: React.FormEvent) => {
+  const handleEditUser = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!editName.trim() || !editEmail.trim() || !editDriverLicense.trim()) {
+    if (!editName.trim() || !editEmail.trim()) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -151,37 +182,43 @@ const UserManagement = () => {
       return;
     }
     
-    // Verificar se o email já existe (exceto o do usuário atual)
-    if (users.some(user => user.email === editEmail && user.id !== editingUser.id)) {
-      toast.error("Este email já está em uso por outro usuário");
-      return;
-    }
-    
     // Função para processar e atualizar o usuário
-    const processUserUpdate = (driverLicenseFileData?: any) => {
-      // Atualizar o usuário
-      const updatedUsers = users.map(user => {
-        if (user.id === editingUser.id) {
-          return {
-            ...user,
-            name: editName,
-            email: editEmail,
-            driverLicense: editDriverLicense,
-            // Atualizar a senha apenas se a opção foi selecionada
-            password: changePassword ? editPassword : user.password,
-            driverLicenseFile: driverLicenseFileData !== undefined 
-              ? driverLicenseFileData 
-              : user.driverLicenseFile,
-            isAdmin: editIsAdmin
-          };
+    const processUserUpdate = async (driverLicenseFileData?: any) => {
+      try {
+        // Preparar dados para atualização
+        const userData: any = {
+          name: editName,
+          email: editEmail,
+          driverLicense: editDriverLicense,
+          isAdmin: editIsAdmin
+        };
+        
+        // Incluir senha apenas se foi solicitada alteração
+        if (changePassword) {
+          userData.password = editPassword;
         }
-        return user;
-      });
-      
-      setUsers(updatedUsers);
-      localStorage.setItem("solusUsers", JSON.stringify(updatedUsers));
-      setIsEditOpen(false);
-      toast.success("Usuário atualizado com sucesso!");
+        
+        // Incluir arquivo da CNH se foi enviado
+        if (driverLicenseFileData) {
+          userData.driverLicenseFile = driverLicenseFileData;
+        }
+        
+        // Chamar API para atualizar o usuário
+        const response = await userService.updateUser(editingUser.id, userData);
+        
+        if (response.success) {
+          toast.success("Usuário atualizado com sucesso!");
+          setIsEditOpen(false);
+          
+          // Atualizar lista de usuários
+          fetchUsers();
+        } else {
+          toast.error(response.message || "Erro ao atualizar usuário");
+        }
+      } catch (error: any) {
+        console.error("Erro ao atualizar usuário:", error);
+        toast.error(error.response?.data?.message || "Erro ao atualizar usuário");
+      }
     };
 
     // Se um novo arquivo foi selecionado, convertê-lo
@@ -340,66 +377,78 @@ const UserManagement = () => {
           <CardTitle>Usuários Cadastrados</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>CNH</TableHead>
-                <TableHead>Documento</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.driverLicense}</TableCell>
-                  <TableCell>
-                    {user.driverLicenseFile ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          if (user.driverLicenseFile?.data) {
-                            window.open(user.driverLicenseFile.data as string, '_blank');
-                          }
-                        }}
-                      >
-                        Ver documento
-                      </Button>
-                    ) : (
-                      <span className="text-gray-400">Não anexado</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {user.isAdmin ? "Administrador" : "Usuário"}
-                  </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditModal(user)}
-                      className="mr-2"
-                      disabled={user.id === 1} // Não permitir editar o admin principal
-                    >
-                      <Edit className="h-4 w-4 mr-1" /> Editar
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteUser(user.id)}
-                      disabled={user.id === 1} // Não permitir excluir o admin principal
-                    >
-                      Excluir
-                    </Button>
-                  </TableCell>
+          {loading ? (
+            <p>Carregando usuários...</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>CNH</TableHead>
+                  <TableHead>Documento</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {users.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center">
+                      Nenhum usuário cadastrado
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  users.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell>{user.name}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.driverLicense || "N/A"}</TableCell>
+                      <TableCell>
+                        {user.driverLicenseFile ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              if (user.driverLicenseFile?.data) {
+                                window.open(user.driverLicenseFile.data as string, '_blank');
+                              }
+                            }}
+                          >
+                            Ver documento
+                          </Button>
+                        ) : (
+                          <span className="text-gray-400">Não anexado</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {user.isAdmin ? "Administrador" : "Usuário"}
+                      </TableCell>
+                      <TableCell className="text-right space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openEditModal(user)}
+                          className="mr-2"
+                          disabled={user.id === 1} // Não permitir editar o admin principal
+                        >
+                          <Edit className="h-4 w-4 mr-1" /> Editar
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDeleteUser(user.id)}
+                          disabled={user.id === 1} // Não permitir excluir o admin principal
+                        >
+                          Excluir
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

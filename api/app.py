@@ -31,14 +31,6 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
     isAdmin = db.Column(db.Boolean, default=False)
-    driverLicense = db.Column(db.String(20), nullable=True)
-    driverLicenseFile = db.Column(db.Text, nullable=True)
-    
-    def __init__(self, **kwargs):
-        super(User, self).__init__(**kwargs)
-        # Garante que driverLicense seja None se for string vazia
-        if self.driverLicense == '':
-            self.driverLicense = None
 
 class Room(db.Model):
     __tablename__ = 'rooms'
@@ -98,15 +90,13 @@ with app.app_context():
             name="Admin User",
             email="admin@solus.com",
             password="admin123",
-            isAdmin=True,
-            driverLicense="12345678900"
+            isAdmin=True
         )
         regular_user = User(
             name="Regular User", 
             email="user@solus.com", 
             password="user123", 
-            isAdmin=False,
-            driverLicense="98765432100"
+            isAdmin=False
         )
         db.session.add(admin_user)
         db.session.add(regular_user)
@@ -152,6 +142,11 @@ def login():
         # Não enviar a senha para o frontend
         user_dict = to_dict(user)
         del user_dict['password']
+        
+        # Adicionar campos de driver license como vazios para manter compatibilidade com frontend
+        user_dict['driverLicense'] = ''
+        user_dict['driverLicenseFile'] = None
+        
         return jsonify({"success": True, "user": user_dict})
     else:
         return jsonify({"success": False, "message": "Credenciais inválidas"}), 401
@@ -345,62 +340,51 @@ def get_users():
     users = query.all()
     
     # Não enviar senhas para o frontend
-    user_list = []
-    for user in users:
-        user_data = {
-            'id': user.id,
-            'name': user.name,
-            'email': user.email,
-            'isAdmin': user.isAdmin,
-            'driverLicense': user.driverLicense,
-            'driverLicenseFile': user.driverLicenseFile
-        }
-        user_list.append(user_data)
-    
+    user_list = [to_dict(user) for user in users]
+    for user in user_list:
+        if 'password' in user:
+            del user['password']
+        # Adicionar campos de driver license como vazios para manter compatibilidade com frontend
+        user['driverLicense'] = ''
+        user['driverLicenseFile'] = None
     return jsonify(user_list)
 
 @app.route('/api/users', methods=['POST'])
 def create_user():
     data = request.json
-    
-    # Validações obrigatórias
-    required_fields = ['name', 'email', 'password']
-    for field in required_fields:
-        if not data.get(field):
-            return jsonify({"success": False, "message": f"Campo {field} é obrigatório"}), 400
+    print("Dados recebidos:", data)  # Log para debug
     
     # Verificar se o e-mail já está em uso
     if User.query.filter_by(email=data['email']).first():
         return jsonify({"success": False, "message": "E-mail já cadastrado"}), 409
     
-    # Validação de CNH (11 dígitos)
-    if 'driverLicense' in data and data['driverLicense'] and len(data['driverLicense']) != 11:
-        return jsonify({"success": False, "message": "CNH deve ter 11 dígitos"}), 400
-    
-    # Criar novo usuário
-    new_user = User(
-        name=data['name'],
-        email=data['email'],
-        password=data['password'],  # Considerar usar hash na senha
-        isAdmin=data.get('isAdmin', False),
-        driverLicense=data.get('driverLicense', '').strip() or None,  # Converte string vazia para None
-        driverLicenseFile=data.get('driverLicenseFile')
-    )
-    
-    db.session.add(new_user)
-    db.session.commit()
-    
-    # Não enviar a senha para o frontend
-    user_dict = {
-        'id': new_user.id,
-        'name': new_user.name,
-        'email': new_user.email,
-        'isAdmin': new_user.isAdmin,
-        'driverLicense': new_user.driverLicense,
-        'driverLicenseFile': new_user.driverLicenseFile
-    }
-    
-    return jsonify({"success": True, "user": user_dict})
+    try:
+        # Criar novo usuário apenas com os campos que existem na tabela
+        new_user = User(
+            name=data['name'],
+            email=data['email'],
+            password=data['password'],
+            isAdmin=data.get('isAdmin', False)
+        )
+        
+        db.session.add(new_user)
+        db.session.commit()
+        
+        print("Usuário criado com sucesso:", to_dict(new_user))  # Log para debug
+        
+        # Não enviar a senha para o frontend
+        user_dict = to_dict(new_user)
+        del user_dict['password']
+        
+        # Adicionar campos de driver license como vazios para manter compatibilidade com frontend
+        user_dict['driverLicense'] = ''
+        user_dict['driverLicenseFile'] = None
+        
+        return jsonify({"success": True, "user": user_dict})
+    except Exception as e:
+        db.session.rollback()
+        print("Erro ao criar usuário:", str(e))  # Log para debug
+        return jsonify({"success": False, "message": f"Erro ao criar usuário: {str(e)}"}), 500
 
 @app.route('/api/users/<int:user_id>', methods=['PUT'])
 def update_user(user_id):
@@ -412,34 +396,22 @@ def update_user(user_id):
         if User.query.filter(User.email == data['email'], User.id != user_id).first():
             return jsonify({"success": False, "message": "E-mail já cadastrado"}), 409
     
-    # Validação de CNH (11 dígitos)
-    if 'driverLicense' in data and data['driverLicense'] and len(data['driverLicense']) != 11:
-        return jsonify({"success": False, "message": "CNH deve ter 11 dígitos"}), 400
-    
-    # Atualizar campos permitidos
-    fields_to_update = ['name', 'email', 'isAdmin', 'driverLicense', 'driverLicenseFile']
-    for field in fields_to_update:
-        if field in data:
-            if field == 'driverLicense':
-                setattr(user, field, data[field].strip() or None)
-            else:
-                setattr(user, field, data[field])
-    
-    # Atualizar senha se fornecida
-    if 'password' in data and data['password']:
-        user.password = data['password']  # Considerar usar hash na senha
+    # Atualizar usuário (apenas os campos que existem na tabela)
+    # Filtrar para incluir apenas campos válidos no modelo
+    valid_fields = ['name', 'email', 'password', 'isAdmin']
+    for key in valid_fields:
+        if key in data:
+            setattr(user, key, data[key])
     
     db.session.commit()
     
-    # Retornar dados atualizados
-    user_dict = {
-        'id': user.id,
-        'name': user.name,
-        'email': user.email,
-        'isAdmin': user.isAdmin,
-        'driverLicense': user.driverLicense,
-        'driverLicenseFile': user.driverLicenseFile
-    }
+    # Não enviar a senha para o frontend
+    user_dict = to_dict(user)
+    del user_dict['password']
+    
+    # Adicionar campos de driver license como vazios para manter compatibilidade com frontend
+    user_dict['driverLicense'] = ''
+    user_dict['driverLicenseFile'] = None
     
     return jsonify({"success": True, "user": user_dict})
 
